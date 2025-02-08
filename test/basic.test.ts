@@ -1,9 +1,5 @@
 import { expect, test } from "vitest";
-import { deriv, jvp, numpy as np } from "jax-js";
-
-// test("x is 3", () => {
-//   expect(x).toBe(3);
-// });
+import { jvp, numpy as np } from "jax-js";
 
 // test("has webgpu", async () => {
 //   const adapter = await navigator.gpu?.requestAdapter();
@@ -16,14 +12,15 @@ import { deriv, jvp, numpy as np } from "jax-js";
 //   console.log(adapter.limits.maxVertexBufferArrayStride);
 // });
 
+/** Take the derivative of a simple function. */
+function deriv(f: (x: np.Array) => np.Array): (x: np.ArrayLike) => np.Array {
+  return (x) => {
+    const [_y, dy] = jvp(f, [x], [1.0]);
+    return dy;
+  };
+}
+
 test("can create array", async () => {
-  // const result = np.neg(np.cos(np.array([1, 2, 3])));
-  // np.debugPrint(result);
-
-  // const [y, sinderiv] = np.jvpV1(np.sin, [x], [1.0]);
-  // console.log(await y.js());
-  // console.log(await sinderiv.js());
-
   const x = 3.0;
 
   const result = jvp(

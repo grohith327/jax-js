@@ -525,15 +525,6 @@ function flattenFun(
   return [flatFun, store];
 }
 
-export function deriv(
-  f: (x: TracerValue) => TracerValue
-): (x: TracerValue) => Tracer {
-  return (x) => {
-    const [_y, dy] = jvp(f, [x], [1.0]);
-    return dy;
-  };
-}
-
 // vmap() implementation begins
 
 function mappedAval(batchDim: number, aval: AbstractValue) {
@@ -749,4 +740,13 @@ export function vmap(
     const outsFlat = vmapFlat(fFlat, inAxesFlat, argsFlat);
     return treeUnflatten(outTree.value, outsFlat);
   };
+}
+
+export function jacfwd(f: any, x: Tracer) {
+  if (x.shape.length !== 1) {
+    throw new TypeError("jacfwd only supports 1D inputs");
+  }
+  const [size] = x.shape;
+  const pushfwd = (v: Tracer) => jvp(f, [x], [v])[1];
+  return vmap(pushfwd, [0])(tf.eye(size));
 }

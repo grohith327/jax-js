@@ -17,17 +17,15 @@ type MapJsTree<T, A, B> = T extends A
 type WithArgsSubtype<F extends (args: any[]) => any, T> =
   Parameters<F> extends T ? F : never;
 
+/** Compute the forward-mode Jacobian-vector product for a function. */
 export const jvp = core.jvp as <F extends (...args: any[]) => JsTree<Array>>(
-  f: WithArgsSubtype<F, JsTree<Array>>,
+  f: WithArgsSubtype<F, JsTree<ArrayLike>>,
   primals: MapJsTree<Parameters<F>, Array, ArrayLike>,
   tangents: MapJsTree<Parameters<F>, Array, ArrayLike>
 ) => [ReturnType<F>, ReturnType<F>];
 
+/** Vectorize an operation on a batched axis for one or more inputs. */
 export const vmap = core.vmap as <F extends (...args: any[]) => JsTree<Array>>(
-  f: WithArgsSubtype<F, JsTree<Array>>,
+  f: WithArgsSubtype<F, JsTree<ArrayLike>>,
   inAxes: MapJsTree<Parameters<F>, Array, number>
 ) => F;
-
-export const deriv = core.deriv as unknown as (
-  f: (x: ArrayLike) => ArrayLike
-) => (x: ArrayLike) => Array;
