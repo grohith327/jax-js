@@ -826,6 +826,7 @@ export class Lit {
 
 export type Atom = Var | Lit;
 
+/** A single statement / binding in a Jaxpr, in ANF form. */
 export type JaxprEqn = {
   primitive: Primitive;
   inputs: Atom[];
@@ -896,7 +897,7 @@ function typecheckAtom(env: Set<Var>, x: Atom): ShapedArray {
   }
 }
 
-/** Evaluate a jaxpr on an array of inputs. */
+/** Evaluate a Jaxpr on an array of inputs. */
 function evalJaxpr(jaxpr: Jaxpr, args: Tracer[]): Tracer[] {
   const env = new Map<Var, Tracer>();
 
@@ -919,6 +920,7 @@ function jaxprAsFun(jaxpr: Jaxpr) {
   return (...args: Tracer[]) => evalJaxpr(jaxpr, args);
 }
 
+/** Tracer that records its operations to dynamically construct a Jaxpr. */
 class JaxprTracer extends Tracer {
   constructor(
     trace: Trace,
@@ -932,7 +934,148 @@ class JaxprTracer extends Tracer {
   }
 }
 
-// TODO: JaxprTrace
+/** Analogous to the 'DynamicJaxprTrace' class in JAX. */
+class JaxprTrace extends Trace {
+  /** Register a Jaxpr argument with a given shape and return the tracer. */
+  newArg(aval: ShapedArray): JaxprTracer {
+    aval = ShapedArray.fromAval(aval);
+    const tracer = this.builder.newTracer(this, aval);
+    this.builder.addVar(tracer);
+    return tracer;
+  }
+
+  /** Register a constant / literal in this Jaxpr. */
+  getOrMakeConstTracer(val: TracerValue): JaxprTracer {
+    let tracer = this.builder.constTracers.get(val);
+    if (tracer === undefined) {
+      tracer = this.builder.newTracer(this, ShapedArray.fromAval(getAval(val)));
+      const val2 = pureArray(val);
+      if (!(val2 instanceof Array)) {
+        throw new TypeError(
+          `getOrMakeConstTracer got tracer ${val2} instead of concrete array, ` +
+            "is JaxprTrace not the bottom of the interpreter stack?"
+        );
+      }
+      this.builder.addConst(tracer, val2);
+    }
+    return tracer;
+  }
+  pure = this.getOrMakeConstTracer;
+  lift = this.getOrMakeConstTracer;
+
+  processPrimitive(
+    primitive: Primitive,
+    tracers: JaxprTracer[],
+    params: Record<string, any>
+  ): JaxprTracer[] {
+    const avalsIn = tracers.map((t) => t.aval);
+    const avalsOut = abstractEvalRules[primitive](avalsIn, params);
+    const outTracers = avalsOut.map((aval) =>
+      this.builder.newTracer(this, aval)
+    );
+    this.builder.addEqn({
+      primitive,
+      inputs: tracers.map((t) => this.builder.getVar(t)),
+      params,
+      outBinders: outTracers.map((t) => this.builder.addVar(t)),
+    });
+    return outTracers;
+  }
+
+  get builder(): JaxprBuilder {
+    return this.main.globalData;
+  }
+}
+
+/** Incrementally constructs a Jaxpr. */
+class JaxprBuilder {
+  eqns: JaxprEqn[] = [];
+  tracerToVar: Map<JaxprTracer, Var> = new Map();
+  constTracers: Map<TracerValue, JaxprTracer> = new Map(); // already-seen value -> tracer
+  constVals: Map<Var, Array> = new Map(); // var -> const value
+  tracers: JaxprTracer[] = [];
+
+  newTracer(trace: JaxprTrace, aval: ShapedArray): JaxprTracer {
+    const tracer = new JaxprTracer(trace, aval);
+    this.tracers.push(tracer);
+    return tracer;
+  }
+
+  addEqn(eqn: JaxprEqn) {
+    this.eqns.push(eqn);
+  }
+
+  addVar(tracer: JaxprTracer): Var {
+    if (this.tracerToVar.has(tracer)) {
+      throw new Error(`Tracer was added as variable twice: ${tracer}`);
+    }
+    const v = new Var(tracer.aval);
+    this.tracerToVar.set(tracer, v);
+    return v;
+  }
+
+  getVar(tracer: JaxprTracer): Var {
+    const v = this.tracerToVar.get(tracer);
+    if (v === undefined) {
+      throw new Error(`Could not find variable for tracer: ${tracer}`);
+    }
+    return v;
+  }
+
+  addConst(tracer: JaxprTracer, val: Array) {
+    const v = this.addVar(tracer);
+    this.constTracers.set(val, tracer);
+    this.constVals.set(v, val);
+    return v;
+  }
+
+  build(
+    inTracers: JaxprTracer[],
+    outTracers: JaxprTracer[]
+  ): { jaxpr: Jaxpr; constVals: Array[] } {
+    // Initially, concatenate the constants as the first few inputs.
+    let [constVars, constVals] = unzip2(this.constVals.entries());
+    const t2v = this.getVar.bind(this); // Maps tracer to value.
+    const inBinders = [...constVars, ...inTracers.map(t2v)];
+    const outVars = outTracers.map(t2v);
+    let jaxpr: Jaxpr = { inBinders, eqns: this.eqns, outs: outVars };
+
+    // Inline any scalar constants as Lit and remove from the input list.
+    typecheckJaxpr(jaxpr);
+    [jaxpr, constVals] = _inlineLiterals(jaxpr, constVals);
+    return { jaxpr, constVals };
+  }
+}
+
+function _inlineLiterals(jaxpr: Jaxpr, consts: Array[]): [Jaxpr, Array[]] {
+  const literals = new Map<Atom, Lit>();
+  const constBinders: Var[] = [];
+  const newConsts: Array[] = [];
+
+  for (let i = 0; i < consts.length; i++) {
+    if (ndim(consts[i]) === 0) {
+      literals.set(jaxpr.inBinders[i], new Lit(consts[i] as any));
+    } else {
+      constBinders.push(jaxpr.inBinders[i]);
+      newConsts.push(consts[i]);
+    }
+  }
+
+  const newEqns: JaxprEqn[] = jaxpr.eqns.map((eqn) => ({
+    primitive: eqn.primitive,
+    inputs: eqn.inputs.map((x) => literals.get(x) ?? x),
+    params: eqn.params,
+    outBinders: eqn.outBinders,
+  }));
+  const newOuts = jaxpr.outs.map((x) => literals.get(x) ?? x);
+  const newJaxpr: Jaxpr = {
+    inBinders: [...constBinders, ...jaxpr.inBinders.slice(consts.length)],
+    eqns: newEqns,
+    outs: newOuts,
+  };
+  typecheckJaxpr(newJaxpr); // Double-check for sanity.
+  return [newJaxpr, newConsts];
+}
 
 type AbstractEvalRule = (shapes: ShapedArray[], params: any) => ShapedArray[];
 
