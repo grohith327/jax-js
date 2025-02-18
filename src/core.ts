@@ -98,8 +98,10 @@ type MainTrace = {
 let traceStack: MainTrace[] = [];
 let dynamicTrace: MainTrace | null = null;
 
-// Push an interpreter onto the trace stack. Use this like:
-// `using main = newMain(...);`
+/**
+ * Push an interpreter onto the trace stack. Use this like:
+ * `using main = newMain(...);`
+ */
 function newMain(
   traceType: any,
   globalData: any | null = null
@@ -112,6 +114,21 @@ function newMain(
       traceStack.pop();
     },
   });
+}
+
+/**
+ * Set the current dynamic trace, which stashes the current interpreter stack and acts temporarily
+ * as the bottom of the stack. Use this like:
+ * `using _dynamic = newDynamic(main);`
+ */
+function newDynamic(main: MainTrace): Disposable {
+  const prevDynamicTrace = dynamicTrace;
+  dynamicTrace = main;
+  return {
+    [Symbol.dispose]() {
+      dynamicTrace = prevDynamicTrace;
+    },
+  };
 }
 
 type TracerValue = Tracer | number | boolean;
@@ -801,6 +818,10 @@ export function jacfwd(f: any, x: Tracer) {
 export class Var {
   static nextId = 1; // For debugging, since JavaScript has no id() function like Python.
 
+  static resetIdCounter() {
+    Var.nextId = 1;
+  }
+
   readonly id: number;
   readonly aval: ShapedArray;
 
@@ -888,7 +909,7 @@ export class Jaxpr {
     const outs = this.outs
       .map((x) => (x instanceof Var ? x.name : x.val.js()))
       .join(", ");
-    return PPrint.pp(`{ lambda ${inBinders} .`).stack(
+    return PPrint.pp(`{ lambda ${inBinders} .`).concat(
       PPrint.pp("let ")
         .stack(eqns)
         .concat(PPrint.pp(`in ( ${outs} ) }`))
@@ -1095,9 +1116,9 @@ class JaxprBuilder {
   build(
     inTracers: JaxprTracer[],
     outTracers: JaxprTracer[]
-  ): { jaxpr: Jaxpr; constVals: Array[] } {
+  ): { jaxpr: Jaxpr; consts: Array[] } {
     // Initially, concatenate the constants as the first few inputs.
-    let [constVars, constVals] = unzip2(this.constVals.entries());
+    let [constVars, consts] = unzip2(this.constVals.entries());
     const t2v = this.getVar.bind(this); // Maps tracer to value.
     const inBinders = [...constVars, ...inTracers.map(t2v)];
     const outVars = outTracers.map(t2v);
@@ -1105,8 +1126,8 @@ class JaxprBuilder {
 
     // Inline any scalar constants as Lit and remove from the input list.
     typecheckJaxpr(jaxpr);
-    [jaxpr, constVals] = _inlineLiterals(jaxpr, constVals);
-    return { jaxpr, constVals };
+    [jaxpr, consts] = _inlineLiterals(jaxpr, consts);
+    return { jaxpr, consts };
   }
 }
 
@@ -1240,3 +1261,30 @@ const abstractEvalRules: Record<Primitive, AbstractEvalRule> = {
     return [new ShapedArray(shape, x.dtype)];
   },
 };
+
+export function makeJaxpr(
+  f: Function
+): (...argsIn: any) => { jaxpr: Jaxpr; consts: Array[]; treedef: JsTreeDef } {
+  return (...argsIn) => {
+    const [avalsIn, inTree] = treeFlatten(argsIn);
+    const [fFlat, outTree] = flattenFun(f, inTree);
+
+    Var.resetIdCounter(); // Reset the counter for each new Jaxpr trace.
+    const builder = new JaxprBuilder();
+    using main = newMain(JaxprTrace, builder);
+    using _dynamic = newDynamic(main);
+
+    const trace = new JaxprTrace(main);
+    const tracersIn = avalsIn.map((aval) => trace.newArg(aval));
+    const outs = fFlat(...tracersIn);
+    const tracersOut = outs.map(
+      (out: Tracer) => fullRaise(trace, out) as JaxprTracer
+    );
+    const { jaxpr, consts } = builder.build(tracersIn, tracersOut);
+
+    if (outTree.value === undefined) {
+      throw new Error("outTree was not set in makeJaxpr");
+    }
+    return { jaxpr, consts, treedef: outTree.value };
+  };
+}

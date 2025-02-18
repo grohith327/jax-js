@@ -2,7 +2,7 @@ import * as core from "./core";
 import * as numpy from "./numpy";
 import { Array, ArrayLike } from "./numpy";
 import * as tree from "./tree";
-import type { JsTree } from "./tree";
+import type { JsTree, JsTreeDef } from "./tree";
 
 export { numpy, tree };
 
@@ -35,3 +35,14 @@ export const jacfwd = core.jacfwd as <F extends (x: Array) => Array>(
   f: F,
   x: Array
 ) => F;
+
+/** Construct a Jaxpr by dynamically tracing a function with example inputs. */
+export const makeJaxpr = core.makeJaxpr as <
+  F extends (...args: any[]) => JsTree<Array>,
+>(
+  f: WithArgsSubtype<F, JsTree<ArrayLike>>
+) => (...args: Parameters<F>) => {
+  jaxpr: core.Jaxpr;
+  consts: Array[];
+  treedef: JsTreeDef;
+};

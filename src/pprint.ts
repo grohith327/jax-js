@@ -16,8 +16,8 @@ export class PPrint {
   /** Concatenate two or more pretty-printed expressions. */
   concat(...items: PPrint[]): PPrint {
     return new PPrint(
-      this.indents.concat(...items.map((i) => i.indents)),
-      this.lines.concat(...items.map((i) => i.lines))
+      (this.indents ?? []).concat(...items.map((i) => i.indents)),
+      (this.lines ?? []).concat(...items.map((i) => i.lines))
     );
   }
 
