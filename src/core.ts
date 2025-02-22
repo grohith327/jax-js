@@ -1288,7 +1288,9 @@ export function makeJaxpr(
     using _dynamic = newDynamic(main);
 
     const trace = new JaxprTrace(main);
-    const tracersIn = avalsIn.map((aval) => trace.newArg(aval));
+    const tracersIn = avalsIn.map((aval) =>
+      trace.newArg(typeof aval === "object" ? aval : pureArray(aval))
+    );
     const outs = fFlat(...tracersIn);
     const tracersOut = outs.map(
       (out: Tracer) => fullRaise(trace, out) as JaxprTracer
