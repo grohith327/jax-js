@@ -153,7 +153,7 @@ function reshapeMask(
  *   2. If mask exists, and ∃i. dim[i] ∉ mask[i], return 0.
  *   2. Otherwise, look at this memory address: offset + ∑(strides[i] * dim[i]).
  */
-class View {
+export class View {
   // Cached, computed property values.
   #size: number | undefined;
   #contiguous: boolean | undefined;
@@ -216,7 +216,7 @@ class View {
         }
       }
     }
-    return new View(shape, strides, 0, null);
+    return new View(shape, strides, offset, mask);
   }
 
   get ndim(): number {
