@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
-import { getBackend, BackendOp } from "../backend";
+import { accessorAlu, getBackend } from "../backend";
 import { ShapeTracker } from "../shape";
+import { AluExp, DType } from "../alu";
 
 test("can run cpu operations", async ({ skip }) => {
   const backend = await getBackend("cpu");
@@ -15,11 +16,16 @@ test("can run cpu operations", async ({ skip }) => {
   const c = backend.malloc(3 * 4);
 
   try {
-    await backend.executeOp(BackendOp.Mul, [a, b], [shape, shape], [c]);
+    const gidx = AluExp.special(DType.Int32, "gidx", 3);
+    const arg1 = accessorAlu(0, shape, gidx);
+    const arg2 = accessorAlu(1, shape, gidx);
+
+    await backend.execute(AluExp.mul(arg1, arg2), [a, b], [c]);
+
     const buf = await backend.read(c);
     expect(new Float32Array(buf)).toEqual(new Float32Array([4, 10, 18]));
 
-    await backend.executeOp(BackendOp.Add, [a, b], [shape, shape], [c]);
+    await backend.execute(AluExp.add(arg1, arg2), [a, b], [c]);
     const buf2 = await backend.read(c);
     expect(new Float32Array(buf2)).toEqual(new Float32Array([5, 7, 9]));
   } finally {

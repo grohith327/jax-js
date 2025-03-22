@@ -9,7 +9,8 @@
  * and dispatch happens on the level of each shader. Buffers are untyped.
  */
 
-import { ShapeTracker } from "./shape";
+import { AluExp, DType } from "./alu";
+import { ShapeTracker, unravelAlu } from "./shape";
 
 export async function getBackend(backendName: string): Promise<Backend | null> {
   if (backendName === "cpu") {
@@ -50,29 +51,28 @@ export interface Backend {
   readSync(slot: Slot, start?: number, count?: number): ArrayBuffer;
 
   /** Run a backend operation. */
-  executeOp(
-    op: BackendOp,
-    inputs: Slot[],
-    shapes: ShapeTracker[],
-    outputs: Slot[],
-  ): Promise<void>;
+  execute(exp: AluExp, inputs: Slot[], outputs: Slot[]): Promise<void>;
 
   /** Run a backend operation, blocking variant. */
-  executeOpSync(
-    op: BackendOp,
-    inputs: Slot[],
-    shapes: ShapeTracker[],
-    outputs: Slot[],
-  ): void;
-}
-
-export enum BackendOp { // TODO: This is temporary
-  Add,
-  Mul,
+  executeSync(exp: AluExp, inputs: Slot[], outputs: Slot[]): void;
 }
 
 export class SlotError extends Error {
   constructor(slot: Slot) {
     super(`Used a buffer that is invalid or already freed: ${slot}`);
   }
+}
+
+/** Expression for accessing `offset` in input array with the given shape. */
+export function accessorAlu(
+  gid: number,
+  st: ShapeTracker,
+  offset: AluExp,
+): AluExp {
+  const [index, valid] = st.toAluExp(unravelAlu(st.shape, offset));
+  return AluExp.where(
+    valid,
+    AluExp.globalIndex(DType.Float32, gid, index),
+    AluExp.f32(0),
+  );
 }

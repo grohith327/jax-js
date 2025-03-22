@@ -19,7 +19,7 @@
  * This file is a bit longer than the original, since Python is more concise.
  */
 
-import { AluExp, DType } from "./alu";
+import { AluExp } from "./alu";
 import { deepEqual, idiv, isPermutation, rep, zip } from "./utils";
 
 type Pair = [number, number];

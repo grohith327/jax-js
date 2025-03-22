@@ -50,6 +50,9 @@ export class AluExp {
   static special(dtype: DType, name: string, n: number): AluExp {
     return new AluExp(AluOp.Special, dtype, [], [name, n]);
   }
+  static globalIndex(dtype: DType, gid: number, bufidx: AluExp): AluExp {
+    return new AluExp(AluOp.GlobalIndex, dtype, [bufidx], gid);
+  }
 
   static i32(value: number): AluExp {
     return AluExp.const(DType.Int32, value);
@@ -74,38 +77,55 @@ export class AluExp {
     return undefined;
   }
 
-  /** Evaluate the expression, returning the result (or a list of results). */
-  evaluate(context: Record<string, any>): any {
-    let x, y;
+  /**
+   * Evaluate the expression on CPU, returning the result.
+   *
+   * Typically you would compile the AluExp as a representation to a lower-level
+   * language. This is just to define the semantics and help debug.
+   */
+  evaluate(
+    context: Record<string, any>,
+    globals?: (gid: number, bufidx: number) => any,
+  ): any {
+    if (AluGroup.Binary.has(this.op) || AluGroup.Compare.has(this.op)) {
+      const x = this.src[0].evaluate(context, globals);
+      const y = this.src[1].evaluate(context, globals);
+      switch (this.op) {
+        case AluOp.Add:
+          return this.dtype === DType.Bool ? x || y : x + y;
+        case AluOp.Sub:
+          return x - y;
+        case AluOp.Mul:
+          return this.dtype === DType.Bool ? x && y : x * y;
+        case AluOp.Idiv:
+          return Math.floor(x / y);
+        case AluOp.Mod:
+          return x % y;
+        case AluOp.Cmplt:
+          return x < y;
+        case AluOp.Cmpne:
+          return x != y;
+        default:
+          throw new Error(`Missing implemementation for ${this.op}`);
+      }
+    }
+
     switch (this.op) {
-      case AluOp.Add:
-        x = this.src[0].evaluate(context);
-        y = this.src[1].evaluate(context);
-        return this.dtype === DType.Bool ? x || y : x + y;
-      case AluOp.Sub:
-        return this.src[0].evaluate(context) - this.src[1].evaluate(context);
-      case AluOp.Mul:
-        x = this.src[0].evaluate(context);
-        y = this.src[1].evaluate(context);
-        return this.dtype === DType.Bool ? x && y : x * y;
-      case AluOp.Idiv:
-        return Math.floor(
-          this.src[0].evaluate(context) / this.src[1].evaluate(context),
-        );
-      case AluOp.Mod:
-        return this.src[0].evaluate(context) % this.src[1].evaluate(context);
-      case AluOp.Cmplt:
-        return this.src[0].evaluate(context) < this.src[1].evaluate(context);
-      case AluOp.Cmpne:
-        return this.src[0].evaluate(context) != this.src[1].evaluate(context);
       case AluOp.Where:
-        return this.src[0].evaluate(context)
-          ? this.src[1].evaluate(context)
-          : this.src[2].evaluate(context);
+        return this.src[0].evaluate(context, globals)
+          ? this.src[1].evaluate(context, globals)
+          : this.src[2].evaluate(context, globals);
       case AluOp.Const:
         return this.arg;
       case AluOp.Special:
         return context[this.arg[0]];
+      case AluOp.GlobalIndex:
+        if (!globals) throw new Error("Missing globals function");
+        const gid: number = this.arg;
+        const bufidx = this.src[0].evaluate(context, globals);
+        return globals(gid, bufidx);
+      default:
+        throw new Error(`Missing implemementation for ${this.op}`);
     }
   }
 }
@@ -117,9 +137,18 @@ export enum AluOp {
   Mul,
   Idiv,
   Mod,
+  Sin,
+  Cos,
   Cmplt,
   Cmpne,
   Where,
   Const, // arg = value
-  Special, // arg = [variable_name, n]
+  Special, // arg = [variable, n]
+  GlobalIndex, // arg = gid; src = [bufidx]
 }
+
+export const AluGroup = {
+  Binary: new Set([AluOp.Add, AluOp.Sub, AluOp.Mul, AluOp.Idiv, AluOp.Mod]),
+  Unary: new Set([AluOp.Sin, AluOp.Cos]),
+  Compare: new Set([AluOp.Cmplt, AluOp.Cmpne]),
+};

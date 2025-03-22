@@ -1,4 +1,4 @@
-import { Backend, BackendOp, Slot, SlotError } from "../backend";
+import { Backend, Slot, SlotError } from "../backend";
 import { ShapeTracker } from "../shape";
 import { DEBUG } from "../utils";
 
@@ -82,7 +82,7 @@ export class WebGPUBackend implements Backend {
     throw new Error("readSync() not implemented for WebGPU");
   }
 
-  async executeOp(
+  async execute(
     op: BackendOp,
     inputs: Slot[],
     shapes: ShapeTracker[],
@@ -94,7 +94,7 @@ export class WebGPUBackend implements Backend {
     pipelineSubmit(op, this.device, pipeline, inputBuffers, outputBuffers);
   }
 
-  executeOpSync(
+  executeSync(
     op: BackendOp,
     inputs: Slot[],
     shapes: ShapeTracker[],
