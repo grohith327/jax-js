@@ -19,7 +19,7 @@ npm test
 - [x] Demos: Browser REPL / editor
 - [x] First custom kernel
 - [ ] Custom WebGPU backend, removing tfjs dependency
-  - [ ] Low-level operations
+  - [x] Low-level operations
   - [ ] Create `class Array {}` wrappers
   - [ ] Reduction operations
   - [ ] "Group" optimizations
