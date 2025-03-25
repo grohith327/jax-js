@@ -146,11 +146,11 @@ export class CodeGenerator {
   memory: Memory;
   void = { typeId: 0x40 };
 
-  functions: Function_[] = [];
-  exportedFunctions = new Map<number, string>();
-  curFunction: Function_ | null = null;
-  curBytes: number[] = [];
-  typeStack: Type[] = [];
+  #functions: Function_[] = [];
+  #exportedFunctions = new Map<number, string>();
+  #curFunction: Function_ | null = null;
+  #curBytes: number[] = [];
+  #typeStack: Type[] = [];
 
   constructor() {
     this.local = new Local(this);
@@ -182,80 +182,84 @@ export class CodeGenerator {
   else() {
     this.emit(0x05);
   }
-  br(labelidx: number) {
+  /** Branch to a block a certain depth outward on the stack. */
+  br(depth: number) {
     this.emit(0x0c);
-    this.emit(encodeUnsigned(labelidx));
+    this.emit(encodeUnsigned(depth));
   }
-  br_if(labelidx: number) {
+  /** Conditional branch to a block a certain depth outward on the stack. */
+  br_if(depth: number) {
     assert(this.pop().typeId === this.i32.typeId, "br_if: expected i32");
     this.emit(0x0d);
-    this.emit(encodeUnsigned(labelidx));
+    this.emit(encodeUnsigned(depth));
   }
+  /** End a block (`block`, `if`/`else`, `loop`). */
   end() {
     this.emit(0x0b);
   }
+  /** Call a function with the given ID. */
   call(fn: number) {
-    assert(fn < this.functions.length, "function index does not exist");
+    assert(fn < this.#functions.length, "function index does not exist");
     this.emit(0x10);
     this.emit(encodeUnsigned(fn));
   }
 
   /** Export a function. */
   export(fn: number, name: string) {
-    this.exportedFunctions.set(fn, name);
+    this.#exportedFunctions.set(fn, name);
   }
 
   /** Declare a new function; returns its index. */
   function(inputTypes: Type[], outputTypes: Type[], body: () => void): number {
-    const idx = this.functions.length;
-    this.functions.push(new Function_(inputTypes, outputTypes, body));
+    const idx = this.#functions.length;
+    this.#functions.push(new Function_(inputTypes, outputTypes, body));
     return idx;
   }
 
   // --- Implementation helpers
 
   declareLocal(type: Type): number {
-    assert(this.curFunction !== null, "No current function");
+    assert(this.#curFunction !== null, "No current function");
     const idx =
-      this.curFunction.locals.length + this.curFunction.inputTypes.length;
-    this.curFunction.locals.push(type);
+      this.#curFunction.locals.length + this.#curFunction.inputTypes.length;
+    this.#curFunction.locals.push(type);
     return idx;
   }
 
   inputTypes(): Type[] {
-    assert(this.curFunction !== null, "No current function");
-    return this.curFunction.inputTypes;
+    assert(this.#curFunction !== null, "No current function");
+    return this.#curFunction.inputTypes;
   }
 
   locals(): Type[] {
-    assert(this.curFunction !== null, "No current function");
-    return this.curFunction.locals;
+    assert(this.#curFunction !== null, "No current function");
+    return this.#curFunction.locals;
   }
 
   push(type: Type) {
-    this.typeStack.push(type);
+    this.#typeStack.push(type);
   }
   pop(): Type {
-    assert(this.typeStack.length > 0, "popping empty stack");
-    return this.typeStack.pop()!;
+    assert(this.#typeStack.length > 0, "popping empty stack");
+    return this.#typeStack.pop()!;
   }
 
   emit(bytes: number | number[]) {
-    if (typeof bytes === "number") this.curBytes.push(bytes);
-    else this.curBytes.push(...bytes);
+    if (typeof bytes === "number") this.#curBytes.push(bytes);
+    else this.#curBytes.push(...bytes);
   }
 
   // Emit the complete module as an array of bytes.
   finish(): Uint8Array {
-    this.curBytes = [];
+    this.#curBytes = [];
     let emittedBytes: number[] = [];
     concat(emittedBytes, magicModuleHeader);
     concat(emittedBytes, moduleVersion);
 
     // Type section
     let typeSectionBytes: number[] = [];
-    concat(typeSectionBytes, encodeUnsigned(this.functions.length));
-    for (const f of this.functions) {
+    concat(typeSectionBytes, encodeUnsigned(this.#functions.length));
+    for (const f of this.#functions) {
       typeSectionBytes.push(0x60);
       concat(typeSectionBytes, encodeUnsigned(f.inputTypes.length));
       for (const t of f.inputTypes) {
@@ -297,8 +301,8 @@ export class CodeGenerator {
 
     // Function section
     let functionSectionBytes: number[] = [];
-    concat(functionSectionBytes, encodeUnsigned(this.functions.length));
-    for (let i = 0; i < this.functions.length; i++) {
+    concat(functionSectionBytes, encodeUnsigned(this.#functions.length));
+    for (let i = 0; i < this.#functions.length; i++) {
       concat(functionSectionBytes, encodeUnsigned(i));
     }
     emittedBytes.push(0x03);
@@ -330,14 +334,14 @@ export class CodeGenerator {
     // Export section
     let exportSectionBytes: number[] = [];
     const numExports =
-      this.exportedFunctions.size + (this.memory.isExport ? 1 : 0);
+      this.#exportedFunctions.size + (this.memory.isExport ? 1 : 0);
     concat(exportSectionBytes, encodeUnsigned(numExports));
     if (this.memory.isExport) {
       concat(exportSectionBytes, encodeString(this.memory.aString));
       exportSectionBytes.push(0x02);
       exportSectionBytes.push(0x00); // one memory at index 0
     }
-    for (const [key, name] of this.exportedFunctions.entries()) {
+    for (const [key, name] of this.#exportedFunctions.entries()) {
       concat(exportSectionBytes, encodeString(name));
       exportSectionBytes.push(0x00);
       concat(exportSectionBytes, encodeUnsigned(key));
@@ -348,27 +352,27 @@ export class CodeGenerator {
 
     // Code section
     let codeSectionBytes: number[] = [];
-    concat(codeSectionBytes, encodeUnsigned(this.functions.length));
-    for (const f of this.functions) {
-      this.curFunction = f;
-      this.curBytes = [];
+    concat(codeSectionBytes, encodeUnsigned(this.#functions.length));
+    for (const f of this.#functions) {
+      this.#curFunction = f;
+      this.#curBytes = [];
       f.emit();
       this.end();
-      const bodyBytes = [...this.curBytes];
-      this.curBytes = [];
+      const bodyBytes = [...this.#curBytes];
+      this.#curBytes = [];
       // Header: local declarations
-      concat(this.curBytes, encodeUnsigned(f.locals.length));
+      concat(this.#curBytes, encodeUnsigned(f.locals.length));
       for (const l of f.locals) {
         this.emit(0x01);
         this.emit(l.typeId);
       }
-      const headerBytes = [...this.curBytes];
+      const headerBytes = [...this.#curBytes];
       const fnSize = headerBytes.length + bodyBytes.length;
       concat(codeSectionBytes, encodeUnsigned(fnSize));
       concat(codeSectionBytes, headerBytes);
       concat(codeSectionBytes, bodyBytes);
     }
-    this.curFunction = null;
+    this.#curFunction = null;
 
     emittedBytes.push(0x0a);
     concat(emittedBytes, encodeUnsigned(codeSectionBytes.length));

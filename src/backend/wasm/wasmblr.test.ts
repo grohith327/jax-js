@@ -1,6 +1,5 @@
 import { suite, test, expect } from "vitest";
 import { CodeGenerator } from "./wasmblr";
-import { C } from "vitest/dist/chunks/reporters.6vxQttCV";
 
 suite("CodeGenerator", () => {
   test("assembles the add() function", async () => {
@@ -43,7 +42,6 @@ suite("CodeGenerator", () => {
       }
       cg.end();
     });
-
     cg.export(factorialFunc, "factorial");
 
     const wasmBytes = cg.finish();
@@ -61,6 +59,7 @@ suite("CodeGenerator", () => {
     const cg = new CodeGenerator();
 
     cg.memory.pages(1).export("memory");
+
     const vectorSumFunc = cg.function([cg.i32], [cg.f32], () => {
       const vec = cg.local.declare(cg.f32x4);
       const i = cg.local.declare(cg.i32);
@@ -71,23 +70,30 @@ suite("CodeGenerator", () => {
 
       cg.loop(cg.void);
       {
+        // if (i >= length) break;
+        cg.block(cg.void);
+        cg.local.get(i);
+        cg.local.get(0);
+        cg.i32.ge_u();
+        cg.br_if(0);
+
+        // vec += array[i..i+4];
         cg.local.get(i);
         cg.i32.const(4); // number of bytes per f32 element
         cg.i32.mul();
         cg.f32x4.load(4);
         cg.local.get(vec);
         cg.f32x4.add();
-
         cg.local.set(vec);
+
+        // i += 4;
         cg.local.get(i);
         cg.i32.const(4);
         cg.i32.add();
         cg.local.set(i);
 
-        cg.local.get(i);
-        cg.local.get(0);
-        cg.i32.lt_u();
-        cg.br_if(0);
+        cg.br(1); // continue loop
+        cg.end();
       }
       cg.end();
 
