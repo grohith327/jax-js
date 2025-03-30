@@ -12,19 +12,65 @@
 import { AluExp, DType } from "./alu";
 import { ShapeTracker, unravelAlu } from "./shape";
 
-export async function getBackend(backendName: string): Promise<Backend | null> {
-  if (backendName === "cpu") {
+export type BackendType = "cpu" | "webgpu";
+
+let defaultBackend: BackendType = "webgpu";
+const initializedBackends = new Map<BackendType, Backend>();
+
+/**
+ * Initialize `jax-js` library backends.
+ *
+ * By default, this will initialize all available backends. If one or more
+ * backends is provided, only attempt to initialize those. Returns a list of
+ * available backends.
+ */
+export async function init(...backends: BackendType[]): Promise<BackendType[]> {
+  if (backends.length === 0) {
+    backends = ["cpu", "webgpu"];
+  }
+  const promises: Promise<void>[] = [];
+  for (const backendType of new Set(backends)) {
+    if (!initializedBackends.has(backendType)) {
+      promises.push(
+        (async () => {
+          const backend = await createBackend(backendType);
+          if (backend) {
+            initializedBackends.set(backendType, backend);
+          }
+        })(),
+      );
+    }
+  }
+  await Promise.all(promises);
+  return Array.from(initializedBackends.keys());
+}
+
+/** Create a backend, if available. Internal function called by `init()`. */
+async function createBackend(
+  backendType: BackendType,
+): Promise<Backend | null> {
+  if (backendType === "cpu") {
     const { CPUBackend } = await import("./backend/cpu");
     return new CPUBackend();
-  } else if (backendName === "webgpu") {
+  } else if (backendType === "webgpu") {
     const { WebGPUBackend } = await import("./backend/webgpu");
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) return null;
     const device = await adapter.requestDevice();
     return new WebGPUBackend(device);
   } else {
-    throw new Error(`Backend not found: ${backendName}`);
+    throw new Error(`Backend not found: ${backendType}`);
   }
+}
+
+/** Retrieve a backend that has been initialized. */
+export function getBackend(backendType?: BackendType): Backend {
+  backendType = backendType ?? defaultBackend;
+  const backend = initializedBackends.get(backendType);
+  if (!backend) {
+    throw new Error(`${backendType} backend not ready, call init() first`);
+  }
+  return backend;
 }
 
 /** Unique identifier for an allocated, on-device buffer. */
@@ -64,15 +110,6 @@ export interface Backend {
    * on that slot to finish.
    */
   dispatch(exe: Executable<any>, inputs: Slot[], outputs: Slot[]): void;
-}
-
-export class Executable<T> {
-  constructor(
-    readonly nargs: number,
-    readonly exp: AluExp,
-    /** Backends store extra data here, and it's only used by that backend. */
-    readonly data: T,
-  ) {}
 }
 
 export class SlotError extends Error {

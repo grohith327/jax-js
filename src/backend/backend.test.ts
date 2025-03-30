@@ -1,12 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { getBackend, accessorAlu } from "../backend";
+import { getBackend, accessorAlu, BackendType, init } from "../backend";
 import { ShapeTracker } from "../shape";
 import { AluExp, DType } from "../alu";
 import { range } from "../utils";
 
-describe.each(["cpu", "webgpu"])("Backend '%s'", (backendName) => {
+const backends: BackendType[] = ["cpu", "webgpu"];
+await init(...backends);
+
+describe.each(backends)("Backend '%s'", (backendType) => {
   test("can run simple operations", async ({ skip }) => {
-    const backend = await getBackend(backendName);
+    const backend = getBackend(backendType);
     if (!backend) return skip();
 
     const shape = ShapeTracker.fromShape([3]);
@@ -37,7 +40,7 @@ describe.each(["cpu", "webgpu"])("Backend '%s'", (backendName) => {
   });
 
   test("can create array from index", async ({ skip }) => {
-    const backend = await getBackend(backendName);
+    const backend = getBackend(backendType);
     if (!backend) return skip();
 
     const a = backend.malloc(200 * 4);
@@ -52,8 +55,8 @@ describe.each(["cpu", "webgpu"])("Backend '%s'", (backendName) => {
     }
   });
 
-  test("can run synchronous operations", async ({ skip }) => {
-    const backend = await getBackend(backendName);
+  test("can run synchronous operations", ({ skip }) => {
+    const backend = getBackend(backendType);
     if (!backend) return skip();
 
     const a = backend.malloc(4 * 4);
@@ -68,8 +71,8 @@ describe.each(["cpu", "webgpu"])("Backend '%s'", (backendName) => {
     }
   });
 
-  test("synchronously reads a buffer", async ({ skip }) => {
-    const backend = await getBackend(backendName);
+  test("synchronously reads a buffer", ({ skip }) => {
+    const backend = getBackend(backendType);
     if (!backend) return skip();
 
     const array = new Float32Array([1, 1, 2, 3, 5, 7]);
@@ -85,7 +88,7 @@ describe.each(["cpu", "webgpu"])("Backend '%s'", (backendName) => {
   });
 
   test("asynchronously reads a buffer", async ({ skip }) => {
-    const backend = await getBackend(backendName);
+    const backend = getBackend(backendType);
     if (!backend) return skip();
 
     const array = new Float32Array([1, 1, 2, 3, 5, 7]);

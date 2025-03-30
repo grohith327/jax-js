@@ -1,5 +1,5 @@
 import { AluExp, DType } from "./alu";
-import { Backend, Slot } from "./backend";
+import { Backend, BackendType, getBackend, Slot } from "./backend";
 import { ShapeTracker } from "./shape";
 
 const JsArray = globalThis.Array;
@@ -63,21 +63,29 @@ export class Array {
     this.#pending = pending;
   }
 
-  static zeros(shape: number[], dtype: DType) {
+  static zeros(
+    shape: number[],
+    { dtype, backend }: { dtype?: DType; backend?: BackendType },
+  ) {
+    dtype = dtype ?? DType.Float32;
     return new Array(
       AluExp.const(dtype, 0),
       ShapeTracker.fromShape(shape),
       dtype,
-      backend,
+      getBackend(backend),
     );
   }
 
-  static ones(shape: number[], dtype: DType) {
+  static ones(
+    shape: number[],
+    { dtype, backend }: { dtype?: DType; backend?: BackendType },
+  ) {
+    dtype = dtype ?? DType.Float32;
     return new Array(
       AluExp.const(dtype, 1),
       ShapeTracker.fromShape(shape),
       dtype,
-      backend,
+      getBackend(backend),
     );
   }
 
