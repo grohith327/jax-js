@@ -1,6 +1,6 @@
 import { AluExp, AluGroup, AluOp, DType, Kernel } from "../alu";
 import { Backend, BackendType, Executable, Slot, SlotError } from "../backend";
-import { DEBUG } from "../utils";
+import { DEBUG, findPow2 } from "../utils";
 
 type ShaderDispatch = {
   pipeline: GPUComputePipeline;
@@ -195,23 +195,38 @@ function pipelineSource(
   // binding(n): output buffer
 
   const shader: string[] = []; // line-separated
+  let indent = "";
+  const pushIndent = Symbol("pushIndent");
+  const popIndent = Symbol("popIndent");
+  const emit = (...lines: (string | Symbol)[]) => {
+    for (const line of lines) {
+      if (line === pushIndent) indent += "  ";
+      else if (line === popIndent) indent = indent.slice(0, -2);
+      else shader.push(line ? indent + line : line);
+    }
+  };
 
   for (let i = 0; i < nargs; i++) {
-    shader.push(
+    emit(
       `@group(0) @binding(${i}) var<storage, read> ${args[i]} : array<f32>;`,
     );
   }
-  shader.push(
+  emit(
     `@group(0) @binding(${nargs}) var<storage, read_write> result : array<f32>;`,
   );
 
-  const workgroupSize = device.limits.maxComputeWorkgroupSizeX;
+  const workgroupSize = findPow2(
+    kernel.size,
+    device.limits.maxComputeWorkgroupSizeX,
+  );
 
-  shader.push(
-    `\n@compute @workgroup_size(${workgroupSize})`,
+  emit(
+    "",
+    `@compute @workgroup_size(${workgroupSize})`,
     "fn main(@builtin(global_invocation_id) id : vec3<u32>) {",
-    `  if (id.x >= ${kernel.size}) { return; }`,
-    "  let gidx: i32 = i32(id.x);",
+    pushIndent,
+    `if (id.x >= ${kernel.size}) { return; }`,
+    "let gidx: i32 = i32(id.x);",
   );
 
   // Generate code for each AluExp operation.
@@ -235,7 +250,7 @@ function pipelineSource(
   // Insert phony assignments for inputs that are not in use.
   // https://github.com/gpuweb/gpuweb/discussions/4582#discussioncomment-9146686
   for (let i = 0; i < args.length; i++) {
-    if (!usedArgs[i]) shader.push(`  _ = &${args[i]};`);
+    if (!usedArgs[i]) emit(`_ = &${args[i]};`);
   }
 
   const expContext = new Map<AluExp, string>();
@@ -281,7 +296,7 @@ function pipelineSource(
     if ((references.get(exp) ?? 0) > 1) {
       const name = gensym();
       expContext.set(exp, name);
-      shader.push(`  let ${name}: ${typeName} = ${source};`);
+      emit(`let ${name}: ${typeName} = ${source};`);
       return name;
     } else {
       expContext.set(exp, source);
@@ -289,7 +304,7 @@ function pipelineSource(
     }
   };
 
-  shader.push(`  result[gidx] = ${gen(exp)};`, "}");
+  emit(`result[gidx] = ${gen(exp)};`, popIndent, "}");
   return {
     shader: shader.join("\n"),
     grid: [Math.ceil(kernel.size / workgroupSize), 1],

@@ -111,3 +111,20 @@ export function toposort<T>(terminals: T[], parents: (node: T) => T[]) {
 
   return order.reverse();
 }
+
+/**
+ * Returns the largest power of 2 less than or equal to `max`.
+ *
+ * If `hint` is nonzero, it will not return a number greater than the first
+ * power of 2 that is greater than or equal to `hint`.
+ */
+export function findPow2(hint: number, max: number): number {
+  if (max < 1) {
+    throw new Error("max must be a positive integer");
+  }
+  let ret = 1;
+  while (ret < hint && 2 * ret <= max) {
+    ret *= 2;
+  }
+  return ret;
+}
