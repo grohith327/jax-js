@@ -1,5 +1,6 @@
 import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
 import { unzip2, zip } from "../utils";
+import { pureArray, zerosLike } from "./array";
 import {
   AbstractValue,
   cos,
@@ -10,14 +11,12 @@ import {
   neg,
   newMain,
   Primitive,
-  pureArray,
   reduceSum,
   sin,
   Trace,
   Tracer,
   TracerValue,
   TreeMismatchError,
-  zerosLike,
 } from "./core";
 
 class JVPTracer extends Tracer {

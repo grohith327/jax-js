@@ -1,4 +1,3 @@
-import * as core from "./frontend/core";
 import * as jaxprModule from "./frontend/jaxpr";
 import * as jvpModule from "./frontend/jvp";
 import * as linearizeModule from "./frontend/linearize";

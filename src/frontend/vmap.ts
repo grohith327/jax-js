@@ -1,9 +1,9 @@
 import * as tf from "@tensorflow/tfjs-core";
 
 import { deepEqual, range, unzip2, zip } from "../utils";
+import { Array, pureArray } from "./array";
 import {
   AbstractValue,
-  Array,
   add,
   broadcast,
   cos,
@@ -14,7 +14,6 @@ import {
   neg,
   newMain,
   Primitive,
-  pureArray,
   reduceSum,
   ShapedArray,
   sin,

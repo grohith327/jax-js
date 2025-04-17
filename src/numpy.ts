@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs-core";
 
 import { DType } from "./alu";
-import { Array } from "./frontend/core";
+import { Array } from "./frontend/array";
 import * as core from "./frontend/core";
 import * as vmapModule from "./frontend/vmap";
 import { deepEqual } from "./utils";

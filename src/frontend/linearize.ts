@@ -3,6 +3,7 @@
 import { DType } from "../alu";
 import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
 import { toposort, unzip2 } from "../utils";
+import { pureArray, zeros } from "./array";
 import {
   AbstractValue,
   add,
@@ -15,13 +16,11 @@ import {
   neg,
   newMain,
   Primitive,
-  pureArray,
   ShapedArray,
   Trace,
   Tracer,
   TracerValue,
   TreeMismatchError,
-  zeros,
 } from "./core";
 import {
   abstractEvalRules,

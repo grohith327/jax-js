@@ -2,8 +2,8 @@ import { DType } from "../alu";
 import { PPrint } from "../pprint";
 import { flatten as treeFlatten, JsTreeDef } from "../tree";
 import { unzip2, zip } from "../utils";
+import { Array, pureArray } from "./array";
 import {
-  Array,
   bind,
   flattenFun,
   fullRaise,
@@ -12,7 +12,6 @@ import {
   newDynamic,
   newMain,
   Primitive,
-  pureArray,
   ShapedArray,
   Trace,
   Tracer,
