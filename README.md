@@ -20,6 +20,7 @@ npm test
   expect(df(4)).toBeAllclose(48);
   expect(df(5)).toBeAllclose(75);
   ```
+- Frontend transformations need to match backend type for pureArray() and zeros() calls
 
 ## Milestones
 

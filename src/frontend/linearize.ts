@@ -353,7 +353,7 @@ function evalJaxprTransposed(
       ctStore.delete(v);
       return ct;
     } else {
-      return zeros(v.aval.shape, v.aval.dtype);
+      return zeros(v.aval.shape, { dtype: v.aval.dtype });
     }
   };
 
