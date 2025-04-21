@@ -69,7 +69,7 @@ export function allclose(
   const xData = x.dataSync();
   const yData = y.dataSync();
   for (let i = 0; i < xData.length; i++) {
-    if (xData[i] - yData[i] > atol + rtol * Math.abs(yData[i])) {
+    if (Math.abs(xData[i] - yData[i]) > atol + rtol * Math.abs(yData[i])) {
       return false;
     }
   }

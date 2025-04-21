@@ -670,8 +670,8 @@ export function eye(
   numCols = numCols ?? numRows;
   dtype = dtype ?? DType.Float32;
 
-  if (numCols > numRows) {
-    // If more columns than rows, take the transpose since it's no longer a
+  if (numCols < numRows) {
+    // If less columns than rows, take the transpose since it's no longer a
     // simple modular arithmetic expression.
     const arr = eye(numCols, numRows, { dtype, backend });
     return arr.transpose();
