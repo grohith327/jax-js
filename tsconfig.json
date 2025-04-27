@@ -4,17 +4,13 @@
     "target": "ES2023",
     "lib": ["ES2023", "DOM"],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": true,
     "paths": {
       "@jax-js/core": ["."]
     },
-    "types": ["@webgpu/types", "node"]
+    "types": ["@webgpu/types"],
+    "noEmit": true
   },
-  "exclude": [
-    "./**/build",
-    "./**/dist",
-    "./**/node_modules",
-    "./**/*.config.js"
-  ]
+  "exclude": ["./**/node_modules", "./**/*.config.js", "./dist", "./website"]
 }
