@@ -249,7 +249,7 @@ export function bind(
   const topTrace = findTopTrace(args);
   const tracers = args.map((arg) => fullRaise(topTrace, arg));
   const outs = topTrace.processPrimitive(prim, tracers, params);
-  if (DEBUG >= 4) {
+  if (DEBUG >= 5) {
     console.info(`processing rule for ${prim} on ${tracers} and got ${outs}`);
   }
   return outs.map((out) => out.fullLower());

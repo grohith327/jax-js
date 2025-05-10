@@ -429,19 +429,42 @@ export class AluExp {
     }
   }
 
+  /** Generic fold() operation with a reducer over the expression tree. */
+  #treeFold<T = void>(reducer: (exp: AluExp, mappedSrc: T[]) => T): T {
+    const visited = new Map<AluExp, T>();
+    const recurse = (exp: AluExp): T => {
+      if (visited.has(exp)) return visited.get(exp)!;
+      const mappedSrc = exp.src.map((s) => recurse(s));
+      const result = reducer(exp, mappedSrc);
+      visited.set(exp, result);
+      return result;
+    };
+    return recurse(this);
+  }
+
   /** Rewrite the expression recursively using a visitor. */
   rewrite(visitor: (exp: AluExp) => AluExp | undefined | null): AluExp {
-    const newSrc = this.src.map((x) => x.rewrite(visitor));
-    if (
-      newSrc.length === this.src.length &&
-      newSrc.every((s, i) => s === this.src[i])
-    ) {
-      return visitor(this) ?? this;
-    } else {
-      // If the source changed, we need to create a new expression.
-      const newExp = new AluExp(this.op, this.dtype, newSrc, this.arg);
-      return visitor(newExp) ?? newExp;
-    }
+    return this.#treeFold<AluExp>((exp, newSrc) => {
+      if (
+        newSrc.length === exp.src.length &&
+        newSrc.every((s, i) => s === exp.src[i])
+      ) {
+        return visitor(exp) ?? exp;
+      } else {
+        // If the source changed, we need to create a new expression.
+        const newExp = new AluExp(exp.op, exp.dtype, newSrc, exp.arg);
+        return visitor(newExp) ?? newExp;
+      }
+    });
+  }
+
+  /** Collect all nodes that satisfy a predicate. */
+  collect(predicate: (exp: AluExp) => boolean): AluExp[] {
+    const result: AluExp[] = [];
+    this.#treeFold((exp) => {
+      if (predicate(exp)) result.push(exp);
+    });
+    return result;
   }
 }
 
