@@ -83,5 +83,6 @@ suite.each(backendTypes)("backend:%s", (backend) => {
 
     const b = array([1, 3, 4]);
     expect(b.gt(2).js()).toEqual([false, true, true]);
+    expect(b.gt(2).dataSync()).toEqual(new Int32Array([0, 1, 1]));
   });
 });

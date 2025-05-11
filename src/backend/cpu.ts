@@ -1,4 +1,4 @@
-import { Kernel } from "../alu";
+import { AluOp, DType, Kernel } from "../alu";
 import { Backend, BackendType, Executable, Slot, SlotError } from "../backend";
 import { tuneNullopt } from "../tuner";
 
@@ -71,9 +71,23 @@ export class CPUBackend implements Backend {
     const inputBuffers = inputs.map((slot) => this.#getBuffer(slot));
     const outputBuffers = outputs.map((slot) => this.#getBuffer(slot));
 
-    // BUG: Use proper Float32Array vs Int32Array type here.
-    const inputArrays = inputBuffers.map((buf) => new Float32Array(buf));
-    const outputArray = new Float32Array(outputBuffers[0]);
+    const usedArgs = new Map(
+      exp
+        .collect((exp) => exp.op === AluOp.GlobalIndex)
+        .map((exp) => [exp.arg as number, exp.dtype]),
+    );
+
+    const inputArrays = inputBuffers.map((buf, i) => {
+      const dtype = usedArgs.get(i);
+      if (!dtype) return null!; // This arg is unused, so we just blank it out.
+      return dtype === DType.Float32
+        ? new Float32Array(buf)
+        : new Int32Array(buf);
+    });
+    const outputArray =
+      exp.dtype === DType.Float32
+        ? new Float32Array(outputBuffers[0])
+        : new Int32Array(outputBuffers[0]);
 
     const globals = (gidx: number, bufidx: number) => inputArrays[gidx][bufidx];
     if (!kernel.reduction) {
