@@ -17,6 +17,7 @@ export enum Primitive {
   ReduceSum = "reduce_sum",
   Greater = "greater",
   Less = "less",
+  Where = "where",
   Transpose = "transpose",
   Broadcast = "broadcast",
 }
@@ -47,6 +48,10 @@ export function greater(x: TracerValue, y: TracerValue) {
 
 export function less(x: TracerValue, y: TracerValue) {
   return bind1(Primitive.Less, [x, y]);
+}
+
+export function where(cond: TracerValue, x: TracerValue, y: TracerValue) {
+  return bind1(Primitive.Where, [cond, x, y]);
 }
 
 export function transpose(x: TracerValue, perm?: number[]) {

@@ -29,8 +29,8 @@ describe.each(backendTypes)("backend:%s", (backendType) => {
 
     try {
       const gidx = AluVar.gidx;
-      let arg1 = accessorGlobal(0, shape, [gidx]);
-      let arg2 = accessorGlobal(1, shape.flip([true]), [gidx]);
+      let arg1 = accessorGlobal(DType.Float32, 0, shape, [gidx]);
+      let arg2 = accessorGlobal(DType.Float32, 1, shape.flip([true]), [gidx]);
 
       const exe1 = await backend.prepare(
         new Kernel(2, 3, AluExp.mul(arg1, arg2)),

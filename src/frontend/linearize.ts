@@ -21,6 +21,7 @@ import {
   Tracer,
   TracerValue,
   TreeMismatchError,
+  where,
 } from "./core";
 import {
   abstractEvalRules,
@@ -416,8 +417,15 @@ type TransposeRule = (
   params: any,
 ) => (Tracer | null)[];
 
+// You need a transpose rule for a primitive p if:
+//  - p is used in jvpRules, while computing a tangent (not primal)
+//  - in this use, at least one argument to p is a tangent
+//
+// This computes a backward pass, so it pulls back cotangents to the inputs of p
+// that are UndefPrimal (i.e., tangents that weren't sent forward).
 const transposeRules: Partial<Record<Primitive, TransposeRule>> = {
   [Primitive.Mul]([ct], [x, y]) {
+    // BUG: Doesn't handle broadcasting.
     if (x instanceof UndefPrimal === y instanceof UndefPrimal)
       throw new NonlinearError(Primitive.Mul);
     return x instanceof UndefPrimal
@@ -429,6 +437,7 @@ const transposeRules: Partial<Record<Primitive, TransposeRule>> = {
     return [neg(ct)];
   },
   [Primitive.Add]([ct], [x, y]) {
+    // BUG: Doesn't handle broadcasting.
     if (!(x instanceof UndefPrimal || y instanceof UndefPrimal))
       throw new NonlinearError(Primitive.Add);
     return [ct, ct];
@@ -437,6 +446,19 @@ const transposeRules: Partial<Record<Primitive, TransposeRule>> = {
     if (!(x instanceof UndefPrimal))
       throw new NonlinearError(Primitive.ReduceSum);
     return [broadcast(ct, x.aval.shape, axis)];
+  },
+  // BUG: Doesn't handle broadcasting.
+  [Primitive.Where]([ct], [cond, x, y]) {
+    // Cotangent should be zero be zero where cond doesn't apply.
+    const cts: (Tracer | null)[] = [null, null, null];
+    if (cond instanceof UndefPrimal) throw new NonlinearError(Primitive.Where);
+    if (x instanceof UndefPrimal) {
+      cts[1] = where(cond, ct, zeros(x.aval.shape, { dtype: x.aval.dtype }));
+    }
+    if (y instanceof UndefPrimal) {
+      cts[2] = where(cond, zeros(y.aval.shape, { dtype: y.aval.dtype }), ct);
+    }
+    return cts;
   },
   // TODO: transpose, broadcast
 };

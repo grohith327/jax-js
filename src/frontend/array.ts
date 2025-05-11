@@ -241,8 +241,9 @@ export class Array extends Tracer {
       return new Array(exp, this.#st, this.#dtype, this.#backend);
     }
 
+    const indices = unravelAlu(this.#st.shape, AluVar.gidx);
     const exp = new AluExp(op, this.#dtype, [
-      accessorGlobal(0, this.#st, unravelAlu(this.#st.shape, AluVar.gidx)),
+      AluExp.globalView(this.#dtype, 0, this.#st, indices),
     ]);
     const kernel = new Kernel(1, this.#st.size, exp);
     const output = this.#backend.malloc(kernel.size * 4);
@@ -259,74 +260,89 @@ export class Array extends Tracer {
     );
   }
 
-  static #binaryCustom(
+  #binary(op: AluOp, other: Array): Array {
+    const custom = (src: AluExp[]) => new AluExp(op, this.#dtype, src);
+    return Array.#naryCustom(op, custom, [this, other]);
+  }
+
+  static #naryCustom(
     name: string,
     custom: (src: AluExp[]) => AluExp,
-    [lhs, rhs]: [Array, Array],
+    arrays: Array[],
+    dtypeOverride?: (DType | undefined)[],
   ): Array {
-    if (lhs.#dtype !== rhs.#dtype) {
-      throw new Error(
-        `Dtype mismatch in ${name}: ${lhs.dtype} vs ${rhs.dtype}`,
-      ); // todo: dtype casting
-    }
-    if (lhs.#backend !== rhs.#backend) {
-      throw new Error(
-        `Backend mismatch in ${name}: ${lhs.#backend} vs ${rhs.#backend}`,
-      );
-    }
-    if (!deepEqual(lhs.shape, rhs.shape)) {
-      const newShape = generalBroadcast(lhs.shape, rhs.shape);
-      lhs = lhs.#reshape(
-        lhs.#st
-          .reshape(repeat(1, newShape.length - lhs.ndim).concat(lhs.shape))
-          .expand(newShape),
-      );
-      rhs = rhs.#reshape(
-        rhs.#st
-          .reshape(repeat(1, newShape.length - rhs.ndim).concat(rhs.shape))
-          .expand(newShape),
-      );
-    }
+    const n = arrays.length;
+    const backend = arrays[0].#backend;
+    if (n === 0) throw new TypeError(`No inputs for ${name}`);
 
-    // Short circuit if both are already AluExp.
-    if (lhs.#source instanceof AluExp && rhs.#source instanceof AluExp) {
-      const exp = custom([lhs.#source, rhs.#source]);
-      return new Array(exp, lhs.#st, exp.dtype, lhs.#backend);
+    let dtype: DType | undefined;
+    for (let i = 0; i < n; i++) {
+      if (dtypeOverride?.[i]) {
+        if (arrays[i].#dtype !== dtypeOverride[i]) {
+          throw new TypeError(
+            `Wrong dtype in ${name}: expected ${dtypeOverride[i]}, got ${arrays[i].#dtype}`,
+          );
+        }
+      } else {
+        // Should match dtype of other arguments in the operation.
+        if (!dtype) dtype = arrays[i].#dtype;
+        else if (arrays[i].#dtype !== dtype) {
+          throw new TypeError(
+            `Dtype mismatch in ${name}: ${dtype} vs ${arrays[i].#dtype}`,
+          );
+        }
+      }
+      if (arrays[i].#backend !== backend) {
+        throw new TypeError(
+          `Backend mismatch in ${name}: ${backend.type} vs ${arrays[i].#backend.type}`,
+        );
+      }
+    }
+    if (!dtype) throw new TypeError("nary operation with no dtype");
+
+    const newShape = arrays.map((a) => a.shape).reduce(generalBroadcast);
+    arrays = arrays.map((ar) => {
+      if (deepEqual(ar.shape, newShape)) return ar;
+      return ar.#reshape(
+        ar.#st
+          .reshape(repeat(1, newShape.length - ar.ndim).concat(ar.shape))
+          .expand(newShape),
+      );
+    });
+
+    // Short circuit if all are already AluExp.
+    if (arrays.every((ar) => ar.#source instanceof AluExp)) {
+      const exp = custom(arrays.map((ar) => ar.#source as AluExp));
+      // BUG: What if their shape trackers are different?
+      return new Array(exp, arrays[0].#st, exp.dtype, arrays[0].#backend);
     }
 
     const inputs: Slot[] = [];
     const src: AluExp[] = [];
-
-    for (const ar of [lhs, rhs]) {
+    for (const ar of arrays) {
       const indices = unravelAlu(ar.#st.shape, AluVar.gidx);
       if (ar.#source instanceof AluExp) {
         src.push(accessorAluExp(ar.#source, ar.#st, indices));
       } else {
-        src.push(accessorGlobal(inputs.length, ar.#st, indices));
+        src.push(AluExp.globalView(ar.#dtype, inputs.length, ar.#st, indices));
         inputs.push(ar.#source);
       }
     }
 
     const exp = custom(src);
-    const kernel = new Kernel(inputs.length, lhs.#st.size, exp);
-    const output = lhs.#backend.malloc(kernel.size * 4);
+    const kernel = new Kernel(inputs.length, arrays[0].#st.size, exp);
+    const output = backend.malloc(kernel.size * 4);
     const pending = [
-      ...lhs.#pending,
-      ...rhs.#pending,
+      ...arrays.flatMap((ar) => ar.#pending),
       new PendingExecute(kernel, inputs, [output]),
     ];
     return new Array(
       output,
-      ShapeTracker.fromShape(lhs.shape),
-      exp.dtype,
-      lhs.#backend,
+      ShapeTracker.fromShape(newShape),
+      dtype,
+      backend,
       pending,
     );
-  }
-
-  #binary(op: AluOp, other: Array): Array {
-    const custom = (src: AluExp[]) => new AluExp(op, this.#dtype, src);
-    return Array.#binaryCustom(op, custom, [this, other]);
   }
 
   /** Reduce the last dimension of the array by an operation. */
@@ -395,7 +411,7 @@ export class Array extends Tracer {
     } else {
       // Only realize if the ShapeTracker is non-contiguous.
       if (this.#st.contiguous) return;
-      const exp = accessorGlobal(0, this.#st, indices);
+      const exp = accessorGlobal(this.#dtype, 0, this.#st, indices);
       const kernel = new Kernel(1, this.#st.size, exp);
       const output = this.#backend.malloc(kernel.size * 4);
       const pendingItem = new PendingExecute(kernel, [this.#source], [output]);
@@ -470,11 +486,15 @@ export class Array extends Tracer {
         // TODO: handle NaN
         const custom = ([x, y]: AluExp[]) =>
           AluExp.mul(AluExp.cmpne(x, y), AluExp.cmplt(x, y).not());
-        return [Array.#binaryCustom("greater", custom, [x, y])];
+        return [Array.#naryCustom("greater", custom, [x, y])];
       },
       [Primitive.Less]([x, y]) {
         const custom = ([x, y]: AluExp[]) => AluExp.cmplt(x, y);
-        return [Array.#binaryCustom("less", custom, [x, y])];
+        return [Array.#naryCustom("less", custom, [x, y])];
+      },
+      [Primitive.Where]([cond, x, y]) {
+        const custom = ([cond, x, y]: AluExp[]) => AluExp.where(cond, x, y);
+        return [Array.#naryCustom("where", custom, [cond, x, y], [DType.Bool])];
       },
       [Primitive.Transpose]([x], { perm }: { perm?: number[] }) {
         return [x.#transpose(perm)];

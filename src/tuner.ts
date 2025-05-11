@@ -154,7 +154,7 @@ export function tuneNullopt(kernel: Kernel): TuneResult {
         if (exp.op === AluOp.GlobalView) {
           const gid: number = exp.arg[0];
           const st: ShapeTracker = exp.arg[1];
-          return accessorGlobal(gid, st, exp.src);
+          return accessorGlobal(exp.dtype, gid, st, exp.src);
         }
       })
       .substitute(vars)
@@ -272,7 +272,7 @@ export function tuneWebgpu(kernel: Kernel): TuneResult {
     if (exp.op === AluOp.GlobalView) {
       const gid: number = exp.arg[0];
       const st: ShapeTracker = exp.arg[1];
-      return accessorGlobal(gid, st.compose(dim.st), indices);
+      return accessorGlobal(exp.dtype, gid, st.compose(dim.st), indices);
     }
   });
 

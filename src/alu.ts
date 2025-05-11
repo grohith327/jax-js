@@ -816,6 +816,7 @@ export class Reduction {
 
 /** Expression for accessing `indices` in input array with the given shape. */
 export function accessorGlobal(
+  dtype: DType,
   gid: number,
   st: ShapeTracker,
   indices: AluExp[],
@@ -823,8 +824,8 @@ export function accessorGlobal(
   const [index, valid] = st.toAluExp(indices);
   return AluExp.where(
     valid,
-    AluExp.globalIndex(DType.Float32, gid, index),
-    AluExp.f32(0),
+    AluExp.globalIndex(dtype, gid, index),
+    AluExp.const(dtype, 0),
   );
 }
 

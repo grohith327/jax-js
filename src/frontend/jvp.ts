@@ -17,6 +17,7 @@ import {
   Tracer,
   TracerValue,
   TreeMismatchError,
+  where,
 } from "./core";
 
 class JVPTracer extends Tracer {
@@ -97,6 +98,9 @@ const jvpRules: Partial<Record<Primitive, JvpRule>> = {
   [Primitive.Less]([x, y], _tangents) {
     const outPrimal = less(x, y);
     return [[outPrimal], [zerosLike(outPrimal)]];
+  },
+  [Primitive.Where]([cond, x, y], [_, dx, dy]) {
+    return [[where(cond, x, y)], [where(cond, dx, dy)]];
   },
   // TODO: transpose, broadcast
 };

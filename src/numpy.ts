@@ -1,10 +1,10 @@
 import { DType } from "./alu";
-import { Array, array, eye, pureArray, scalar } from "./frontend/array";
+import { Array, array, eye, pureArray, scalar, zeros } from "./frontend/array";
 import * as core from "./frontend/core";
 import * as vmapModule from "./frontend/vmap";
 import { deepEqual } from "./utils";
 
-export { Array, array, DType, eye, scalar };
+export { Array, array, DType, eye, scalar, zeros };
 
 export const float32 = DType.Float32;
 export const int32 = DType.Int32;
@@ -26,6 +26,11 @@ export const sin = core.sin as (x: ArrayLike) => Array;
 export const cos = core.cos as (x: ArrayLike) => Array;
 export const greater = core.greater as (x: ArrayLike, y: ArrayLike) => Array;
 export const less = core.less as (x: ArrayLike, y: ArrayLike) => Array;
+export const where = core.where as (
+  cond: ArrayLike,
+  x: ArrayLike,
+  y: ArrayLike,
+) => Array;
 export const transpose = core.transpose as (
   x: ArrayLike,
   perm?: number[],
@@ -80,7 +85,7 @@ export function diag(v: ArrayLike, k = 0): Array {
     void dim;
     // TODO: Implementing diag() requires a core primitive to construct arrays
     // from general index manipulation, not just ShapeTracker.
-    // (!!) Or I guess we could do it with a "shear" operation too. Feels jank.
+    // (!!) Or I guess we could do it with "where" on a broadcasted array.
     throw new Error("diag() behavior not yet implemented for 1D arrays");
   } else if (a.ndim === 2) {
     return diagonal(a, k);

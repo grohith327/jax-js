@@ -462,7 +462,7 @@ function binopAbstractEval([x, y]: ShapedArray[]) {
 
 function compareAbstractEval([x, y]: ShapedArray[]) {
   if (!(x instanceof ShapedArray) || !(y instanceof ShapedArray)) {
-    throw new TypeError("binopAbstractEval expects ShapedArray inputs");
+    throw new TypeError("compareAbstractEval expects ShapedArray inputs");
   }
   if (x.dtype !== y.dtype) {
     // TODO: Relax this restriction on dtype equality, or add automatic casts.
@@ -488,6 +488,17 @@ export const abstractEvalRules: Record<Primitive, AbstractEvalRule> = {
   },
   [Primitive.Greater]: compareAbstractEval,
   [Primitive.Less]: compareAbstractEval,
+  [Primitive.Where]([cond, x, y]) {
+    if (cond.dtype !== DType.Bool)
+      throw new TypeError(`Condition must be boolean, got ${cond.dtype}`);
+    if (x.dtype !== y.dtype)
+      throw new TypeError(`Mismatched dtypes: ${x.dtype} vs ${y.dtype}`);
+    const shape = generalBroadcast(
+      cond.shape,
+      generalBroadcast(x.shape, y.shape),
+    );
+    return [new ShapedArray(shape, x.dtype)];
+  },
   [Primitive.Transpose]([x], { perm }: { perm?: number[] }) {
     if (perm === undefined) {
       perm = range(x.shape.length).reverse();

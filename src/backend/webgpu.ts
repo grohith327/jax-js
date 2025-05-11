@@ -189,6 +189,10 @@ function pipelineSource(
   kernel: Kernel,
 ): { shader: string; grid: [number, number] } {
   const tune = tuneWebgpu(kernel);
+  if (DEBUG >= 3) {
+    console.info(kernel.exp.toString());
+    console.info(tune.exp.toString());
+  }
 
   const { nargs } = kernel;
   const args = Array.from({ length: nargs }, (_, i) => `in${i}`);
@@ -208,9 +212,16 @@ function pipelineSource(
     }
   };
 
+  const usedArgs: (DType | null)[] = Array.from({ length: nargs }, () => null);
+  tune.exp.fold((exp) => {
+    if (exp.op === AluOp.GlobalIndex) usedArgs[exp.arg] = exp.dtype;
+  });
+
   for (let i = 0; i < nargs; i++) {
+    let ty = dtypeToWgsl(usedArgs[i] ?? DType.Float32);
+    if (ty === "bool") ty = "i32"; // WebGPU does not support bools in storage buffers.
     emit(
-      `@group(0) @binding(${i}) var<storage, read> ${args[i]} : array<f32>;`,
+      `@group(0) @binding(${i}) var<storage, read> ${args[i]} : array<${ty}>;`,
     );
   }
   emit(
@@ -235,11 +246,6 @@ function pipelineSource(
   // Some expressions may be used twice, so we keep track of them.
   let gensymCount = 0;
   const gensym = () => `alu${gensymCount++}`;
-
-  const usedArgs = Array.from({ length: nargs }, () => false);
-  tune.exp.fold((exp) => {
-    if (exp.op === AluOp.GlobalIndex) usedArgs[exp.arg] = true;
-  });
 
   // Insert phony assignments for inputs that are not in use.
   // https://github.com/gpuweb/gpuweb/discussions/4582#discussioncomment-9146686
@@ -293,6 +299,7 @@ function pipelineSource(
       return arg as string;
     } else if (op === AluOp.GlobalIndex) {
       source = `${args[arg]}[${gen(src[0])}]`;
+      if (dtype === DType.Bool) source = `(${source} != 0)`; // bool is represented as i32
     }
 
     if (!source) throw new Error(`Missing impl for op: ${op}`);

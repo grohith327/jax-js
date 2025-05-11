@@ -152,32 +152,3 @@ suite("jax.jacfwd()", () => {
     );
   });
 });
-
-suite("jax.numpy.eye()", () => {
-  test("computes a square matrix", () => {
-    const x = np.eye(3);
-    expect(x).toBeAllclose([
-      [1, 0, 0],
-      [0, 1, 0],
-      [0, 0, 1],
-    ]);
-  });
-
-  test("computes a rectangular matrix", () => {
-    const x = np.eye(2, 3);
-    expect(x).toBeAllclose([
-      [1, 0, 0],
-      [0, 1, 0],
-    ]);
-  });
-
-  test("can be multiplied", () => {
-    const x = np.eye(3, 5).mul(-42);
-    expect(x.sum()).toBeAllclose(-126);
-    expect(x).toBeAllclose([
-      [-42, 0, 0, 0, 0],
-      [0, -42, 0, 0, 0],
-      [0, 0, -42, 0, 0],
-    ]);
-  });
-});

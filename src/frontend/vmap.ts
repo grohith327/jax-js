@@ -207,6 +207,7 @@ const vmapRules: Partial<Record<Primitive, VmapRule>> = {
     const outBdim = xBdim - axis.filter((ax) => ax < xBdim).length;
     return [[reduceSum(x, newAxis)], [outBdim]];
   },
+  // TODO: greater, less, where, transpose, broadcast
 };
 
 function vmapFlat(
