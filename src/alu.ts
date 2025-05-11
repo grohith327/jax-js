@@ -677,7 +677,12 @@ export const AluGroup = {
   ]),
   Unary: new Set([AluOp.Sin, AluOp.Cos, AluOp.Cast]),
   Compare: new Set([AluOp.Cmplt, AluOp.Cmpne]),
-  Variable: new Set([AluOp.Special, AluOp.Variable, AluOp.GlobalIndex]),
+  Variable: new Set([
+    AluOp.Special,
+    AluOp.Variable,
+    AluOp.GlobalIndex,
+    AluOp.GlobalView,
+  ]),
   Reduce: new Set([AluOp.Add, AluOp.Mul, AluOp.Min, AluOp.Max]),
 };
 
