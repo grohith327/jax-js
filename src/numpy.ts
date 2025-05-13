@@ -11,7 +11,7 @@ import {
 } from "./frontend/array";
 import * as core from "./frontend/core";
 import * as vmapModule from "./frontend/vmap";
-import { deepEqual, range } from "./utils";
+import { deepEqual, prod, range } from "./utils";
 
 export { Array, array, DType, eye, scalar, zeros, ones, full };
 
@@ -91,6 +91,17 @@ export const permuteDims = transpose;
 
 // Version of pureArray with fudged types.
 const fudgeArray = pureArray as (x: ArrayLike) => Array;
+
+/** Return the shape of an array. */
+export function shape(a: ArrayLike): number[] {
+  return a instanceof core.Tracer ? a.shape : [];
+}
+
+/** Return the number of elements in an array, optionally along an axis. */
+export function size(a: ArrayLike, axis?: number): number {
+  const s = shape(a);
+  return axis === undefined ? prod(s) : s[axis];
+}
 
 /**
  * Return specified diagonals.
