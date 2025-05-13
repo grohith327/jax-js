@@ -9,7 +9,7 @@
 <main class="mx-auto my-12 px-4 sm:px-6 max-w-screen-md">
   <div class="mb-10">
     <h1 class="text-6xl text-center font-bold mb-4">jax-js</h1>
-    <p class="italic text-center">Numerical foundations for the web</p>
+    <p class="italic text-center">Numerical / GPU foundations for the web</p>
   </div>
 
   <p class="mb-6">
@@ -19,12 +19,12 @@
   <pre class="mb-6 text-center"><code>npm install @jax-js/jax</code></pre>
 
   <p class="mb-6">
-    This is a machine learning framework that brings high-performance,
+    This is a machine learning framework that brings
     <a href="https://docs.jax.dev/en/latest/" target="_blank" class="link"
       >JAX</a
-    >-style Wasm and WebGPU kernels to JavaScript. Run neural networks, image
-    algorithms, simulations, and all sorts of other numerical applications
-    without leaving the browser.
+    >-style, high-performance CPU and GPU kernels to JavaScript. Run neural
+    networks, image algorithms, simulations, and all sorts of other numerical
+    applications without leaving the browser.
   </p>
 
   <div class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
@@ -63,8 +63,8 @@
   <p class="mb-6">
     The built-in compiler lets it achieve best-in-class performance on the web.
     <code>jax-js</code> compiles math into optimized WebAssembly, WebGL, and
-    WebGPU code on modern browsers. Its generated code is multiple times faster
-    than other browser ML frameworks like
+    WebGPU code on modern browsers. It is up to 5x faster than other browser ML
+    frameworks like
     <a href="https://www.tensorflow.org/js/" target="_blank" class="link"
       >TensorFlow.js</a
     > (Google).
