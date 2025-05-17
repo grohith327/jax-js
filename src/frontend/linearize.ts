@@ -2,7 +2,7 @@
 
 import { DType } from "../alu";
 import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
-import { invertPermutation, toposort, unzip2 } from "../utils";
+import { invertPermutation, toposort, unzip2, zip } from "../utils";
 import { pureArray, zeros } from "./array";
 import {
   AbstractValue,
@@ -33,6 +33,7 @@ import {
   Jaxpr,
   JaxprEqn,
   Lit,
+  makeJaxpr,
   typecheckJaxpr,
   Var,
 } from "./jaxpr";
@@ -483,7 +484,54 @@ const transposeRules: Partial<Record<Primitive, TransposeRule>> = {
     if (!(x instanceof UndefPrimal)) throw new NonlinearError(Primitive.Flip);
     return [flip(ct, axis)];
   },
+  [Primitive.JitCall](cts, args, { jaxpr }: { jaxpr: Jaxpr }) {
+    // We need this one because the jvp() rule for JitCall generates a JitCall
+    // with the transformed Jaxpr. So grad-of-jit will result in a transposed
+    // JitCall, which we need to handle.
+    const undefPrimals = args.map((x) => x instanceof UndefPrimal);
+    const { newJaxpr, newConsts } = transposeJaxpr(jaxpr, undefPrimals);
+    const residuals = args.filter((x, i) => !undefPrimals[i]) as Tracer[];
+    const outs = bind(Primitive.JitCall, [...newConsts, ...residuals, ...cts], {
+      jaxpr: newJaxpr,
+      numConsts: newConsts.length,
+    });
+    // Now pull cotangents back to the corresponding UndefPrimal inputs.
+    let i = 0;
+    return undefPrimals.map((isUndef) => (isUndef ? outs[i++] : null));
+  },
 };
+
+const transposeJaxprCache = new Map<
+  Jaxpr,
+  Map<string, ReturnType<typeof transposeJaxpr>>
+>();
+
+function transposeJaxpr(
+  jaxpr: Jaxpr,
+  undefPrimals: boolean[],
+): { newJaxpr: Jaxpr; newConsts: Tracer[] } {
+  const cacheKey = JSON.stringify(undefPrimals); // deterministic
+  const prevResult = transposeJaxprCache.get(jaxpr)?.get(cacheKey);
+  if (prevResult) return prevResult;
+
+  // This handles grad-of-jit or transpose-of-jit. To do this, it needs to
+  // evaluate the Jaxpr transposed and then retrace it. See the comment in
+  // jvpJaxpr() to explain more about what's going on here.
+  const { inTypes, outTypes } = typecheckJaxpr(jaxpr);
+  const args = zip(inTypes, undefPrimals).map(([aval, isUndef]) =>
+    isUndef ? new UndefPrimal(aval) : aval,
+  );
+  const { jaxpr: newJaxpr, consts: newConsts } = makeJaxpr((args, cotangents) =>
+    evalJaxprTransposed(jaxpr, args, cotangents),
+  )(args, outTypes);
+  typecheckJaxpr(newJaxpr); // sanity check
+  const result = { newJaxpr, newConsts };
+
+  if (!transposeJaxprCache.has(jaxpr))
+    transposeJaxprCache.set(jaxpr, new Map());
+  transposeJaxprCache.get(jaxpr)!.set(cacheKey, result);
+  return result;
+}
 
 function vjpFlat(
   f: (...x: Tracer[]) => Tracer[],

@@ -1,8 +1,9 @@
-import { deepEqual, range, unzip2, zip } from "../utils";
+import { deepEqual, range, rep, unzip2, zip } from "../utils";
 import { eye, pureArray } from "./array";
 import {
   AbstractValue,
   add,
+  bind,
   broadcast,
   compare,
   CompareOp,
@@ -24,6 +25,7 @@ import {
   TreeMismatchError,
 } from "./core";
 import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
+import { Jaxpr, jaxprAsFun, makeJaxpr } from "./jaxpr";
 import { jvp } from "./jvp";
 
 function mappedAval(batchDim: number, aval: AbstractValue) {
@@ -196,12 +198,7 @@ const vmapRules: Partial<Record<Primitive, VmapRule>> = {
   [Primitive.Neg]: vectorizedUnopBatchingRule(neg),
   [Primitive.Sin]: vectorizedUnopBatchingRule(sin),
   [Primitive.Cos]: vectorizedUnopBatchingRule(cos),
-  [Primitive.ReduceSum](
-    axisSize: number,
-    [x]: Tracer[],
-    [xBdim]: (number | null)[],
-    { axis }: { axis: number[] },
-  ): ReturnType<VmapRule> {
+  [Primitive.ReduceSum](axisSize, [x], [xBdim], { axis }: { axis: number[] }) {
     if (xBdim === null) {
       return [[reduceSum(x, axis)], [null]];
     }
@@ -213,11 +210,55 @@ const vmapRules: Partial<Record<Primitive, VmapRule>> = {
     return broadcastBatcher((x, y) => compare(x, y, op))(axisSize, args, dims);
   },
   // TODO: where, transpose, broadcast, reshape, flip
+  [Primitive.JitCall](axisSize, args, dims, { jaxpr }: { jaxpr: Jaxpr }) {
+    const { newJaxpr, newConsts } = vmapJaxpr(jaxpr, axisSize, dims);
+    const outs = bind(Primitive.JitCall, [...newConsts, ...args], {
+      jaxpr: newJaxpr,
+      numConsts: newConsts.length,
+    });
+    return [outs, rep(outs.length, 0)];
+  },
 };
 
+const vmapJaxprCache = new Map<
+  Jaxpr,
+  Map<string, ReturnType<typeof vmapJaxpr>>
+>();
+
+function vmapJaxpr(
+  jaxpr: Jaxpr,
+  axisSize: number,
+  dims: (number | null)[],
+): { newJaxpr: Jaxpr; newConsts: Tracer[] } {
+  const cacheKey = JSON.stringify([axisSize, dims]); // deterministic
+  const prevResult = vmapJaxprCache.get(jaxpr)?.get(cacheKey);
+  if (prevResult) return prevResult;
+
+  // Consts in the Jaxpr become real inputs after vmap transformation, which is
+  // why we ignore numConsts.
+  //
+  // See the comment in jvpJaxpr() to explain more about what's going on here.
+  // This is handling vmap-of-jit, which is a bit tricky. We need to turn the
+  // Jaxpr back into a function and retrace it.
+  const inAvals = jaxpr.inBinders.map((v, i) => {
+    if (dims[i] === null) return v.aval;
+    const shape = [...v.aval.shape];
+    shape.splice(dims[i], 0, axisSize); // Insert the mapped axis into the shape.
+    return new ShapedArray(shape, v.aval.dtype);
+  });
+  const { jaxpr: newJaxpr, consts: newConsts } = makeJaxpr(
+    (...args: Tracer[]) => vmapFlat(jaxprAsFun(jaxpr), dims, args),
+  )(inAvals);
+  const result = { newJaxpr, newConsts };
+
+  if (!vmapJaxprCache.has(jaxpr)) vmapJaxprCache.set(jaxpr, new Map());
+  vmapJaxprCache.get(jaxpr)!.set(cacheKey, result);
+  return result;
+}
+
 function vmapFlat(
-  f: (...x: TracerValue[]) => TracerValue[],
-  inAxes: number[],
+  f: (...x: Tracer[]) => TracerValue[],
+  inAxes: (number | null)[],
   args: TracerValue[],
 ): Tracer[] {
   let axisSize: number | undefined = undefined;
@@ -227,7 +268,7 @@ function vmapFlat(
       if (!(arg instanceof Tracer)) {
         throw new TypeError("vmap requires Tracer argument for mapped axes");
       }
-      const size = arg.shape[inAxes[i]];
+      const size = arg.shape[inAxes[i]!];
       if (axisSize === undefined) {
         axisSize = size;
       } else if (axisSize !== size) {

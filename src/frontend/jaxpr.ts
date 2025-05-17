@@ -292,6 +292,11 @@ export function evalJaxpr(jaxpr: Jaxpr, args: Tracer[]): Tracer[] {
   return jaxpr.outs.map(read);
 }
 
+/** Convert a Jaxpr to a callable function by evaluating it. */
+export function jaxprAsFun(jaxpr: Jaxpr): (...args: Tracer[]) => Tracer[] {
+  return (...args: Tracer[]) => evalJaxpr(jaxpr, args);
+}
+
 /** Tracer that records its operations to dynamically construct a Jaxpr. */
 class JaxprTracer extends Tracer {
   constructor(
@@ -514,6 +519,22 @@ export const abstractEvalRules: Record<Primitive, AbstractEvalRule> = {
   },
   [Primitive.Flip]([x], _: { axis: number[] }) {
     return [new ShapedArray(x.shape, x.dtype)];
+  },
+  [Primitive.JitCall](args, { jaxpr }: { jaxpr: Jaxpr }) {
+    const { inTypes, outTypes } = typecheckJaxpr(jaxpr);
+    if (args.length !== inTypes.length) {
+      throw new TypeError(
+        `jit_call expected ${inTypes.length} arguments, got ${args.length}`,
+      );
+    }
+    for (let i = 0; i < inTypes.length; i++) {
+      if (!args[i].equals(inTypes[i])) {
+        throw new TypeError(
+          `jit_call argument ${i} has type ${args[i]}, expected ${inTypes[i]}`,
+        );
+      }
+    }
+    return outTypes;
   },
 };
 

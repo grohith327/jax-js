@@ -91,6 +91,8 @@ npm test
   - [ ] "Group" optimizations (multiple threads per value, e.g., matvec)
   - [ ] Blocks respect local dimensions
 - [ ] We figure out the `dispose()` / refcount / linear types stuff
+  - [ ] `dispose()` for saved "const" tracers in Jaxprs
+  - [ ] Garbage collection for "Lit" type in Jaxpr, maybe needs to be not stored as Array & hashable
 - [ ] Demos: Navier-Stokes, neural networks, statistics
 - [ ] Wasm backend (needs malloc)
   - [ ] SIMD support for Wasm backend

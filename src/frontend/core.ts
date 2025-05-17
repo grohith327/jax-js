@@ -21,6 +21,7 @@ export enum Primitive {
   Broadcast = "broadcast",
   Reshape = "reshape",
   Flip = "flip",
+  JitCall = "jit_call",
 }
 
 export enum CompareOp {

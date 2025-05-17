@@ -13,7 +13,7 @@ const isFloatDtype = (dtype: DType) =>
   dtype === DType.Float32 || dtype === DType.Complex64;
 
 /**
- * Mathemtical expression on scalar values.
+ * Mathematical expression on scalar values.
  *
  * This is similiar to and based on tinygrad's UOp class, but it's more specific
  * to just math on scalars. We're doing this to avoid the complexity of a full

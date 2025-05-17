@@ -29,6 +29,7 @@ import {
   Tracer,
   TracerValue,
 } from "./core";
+import { Jaxpr } from "./jaxpr";
 
 const JsArray = globalThis.Array;
 
@@ -503,6 +504,15 @@ export class Array extends Tracer {
         const arg = rep(x.ndim, false);
         for (const ax of axis) arg[ax] = true;
         return [x.#reshape(x.#st.flip(arg))];
+      },
+      [Primitive.JitCall](
+        args,
+        { jaxpr, numConsts }: { jaxpr: Jaxpr; numConsts: number },
+      ) {
+        const consts = args.slice(0, numConsts);
+        const tracers = args.slice(numConsts);
+        void [jaxpr, consts, tracers];
+        throw new Error("TODO: JitCall evaluation");
       },
     };
   }

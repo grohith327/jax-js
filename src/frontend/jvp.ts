@@ -3,6 +3,7 @@ import { unzip2, zip } from "../utils";
 import { pureArray, zerosLike } from "./array";
 import {
   AbstractValue,
+  bind,
   broadcast,
   compare,
   CompareOp,
@@ -23,6 +24,7 @@ import {
   TreeMismatchError,
   where,
 } from "./core";
+import { Jaxpr, jaxprAsFun, makeJaxpr } from "./jaxpr";
 
 class JVPTracer extends Tracer {
   constructor(
@@ -118,10 +120,51 @@ const jvpRules: Record<Primitive, JvpRule> = {
   [Primitive.Flip]([x], [dx], { axis }: { axis: number[] }) {
     return [[flip(x, axis)], [flip(dx, axis)]];
   },
+  [Primitive.JitCall](primals, tangents, { jaxpr }: { jaxpr: Jaxpr }) {
+    const { newJaxpr, newConsts } = jvpJaxpr(jaxpr);
+    const outs = bind(
+      Primitive.JitCall,
+      [...newConsts, ...primals, ...tangents],
+      {
+        jaxpr: newJaxpr,
+        numConsts: newConsts.length,
+      },
+    );
+    const n = outs.length / 2;
+    if (!Number.isInteger(n))
+      throw new Error("internal: JVP Jaxpr output length is not even");
+    const [primalsOut, tangentsOut] = [outs.slice(0, n), outs.slice(n)];
+    return [primalsOut, tangentsOut];
+  },
 };
 
+const jvpJaxprCache = new Map<Jaxpr, ReturnType<typeof jvpJaxpr>>();
+
+function jvpJaxpr(jaxpr: Jaxpr): { newJaxpr: Jaxpr; newConsts: Tracer[] } {
+  if (jvpJaxprCache.has(jaxpr)) {
+    return jvpJaxprCache.get(jaxpr)!;
+  }
+
+  // Note: Following the implementation in Autodidax, consts in the Jaxpr become
+  // real inputs after JVP transformation, since they are part of the primals
+  // and the JVP rule takes in [primals, tangents] as a pair.
+  //
+  // This is also why we can ignore `numConsts` in the JVP rule. Anyway, this
+  // only happens in jvp-of-jit cases, where you understandably have to
+  // sacrifice some performance versus wrapping jit() outside.
+  const inAvals = jaxpr.inBinders.map((v) => v.aval);
+  const { jaxpr: newJaxpr, consts: newConsts } = makeJaxpr(
+    (primals: Tracer[], tangents: Tracer[]) =>
+      jvpFlat(jaxprAsFun(jaxpr), primals, tangents),
+  )(inAvals, inAvals);
+  const result = { newJaxpr, newConsts };
+
+  jvpJaxprCache.set(jaxpr, result);
+  return result;
+}
+
 function jvpFlat(
-  f: (...x: TracerValue[]) => TracerValue[],
+  f: (...x: Tracer[]) => TracerValue[],
   primals: TracerValue[],
   tangents: TracerValue[],
 ): [Tracer[], Tracer[]] {
