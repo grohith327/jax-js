@@ -50,9 +50,9 @@ export type ArrayLike = Array | number | boolean;
 /** Element-wise addition, with broadcasting. */
 export const add = core.add as (x: ArrayLike, y: ArrayLike) => Array;
 /** Element-wise multiplication, with broadcasting. */
-export const mul = core.mul as (x: ArrayLike, y: ArrayLike) => Array;
-/** Negate every element of an array. */
-export const neg = core.neg as (x: ArrayLike) => Array;
+export const multiply = core.mul as (x: ArrayLike, y: ArrayLike) => Array;
+/** Numerical negative of every element of an array. */
+export const negative = core.neg as (x: ArrayLike) => Array;
 /** Element-wise sine function (takes radians). */
 export const sin = core.sin as (x: ArrayLike) => Array;
 /** Element-wise cosine function (takes radians). */

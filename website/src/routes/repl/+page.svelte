@@ -36,7 +36,7 @@ console.log(df(x).js());
       title: "Tracing Jaxprs",
       code: String.raw`import { jvp, makeJaxpr, numpy as np } from "@jax-js/jax";
 
-const f = (x: np.Array) => np.mul(x.add(2), x);
+const f = (x: np.Array) => np.multiply(x.add(2), x);
 const fdot = (x: np.Array) => jvp(f, [x], [np.array(1)])[1];
 
 console.log(makeJaxpr(f)(np.array(2)).jaxpr.toString());
