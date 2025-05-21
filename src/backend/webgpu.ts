@@ -24,7 +24,7 @@ export class WebGPUBackend implements Backend {
   #cachedShaderMap = new Map<bigint, ShaderInfo>();
 
   constructor(readonly device: GPUDevice) {
-    if (DEBUG >= 3) {
+    if (DEBUG >= 3 && device.adapterInfo) {
       console.info(
         "webgpu adapter:",
         device.adapterInfo.vendor,
