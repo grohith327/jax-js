@@ -1,4 +1,8 @@
-import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
+import {
+  JsTree,
+  flatten as treeFlatten,
+  unflatten as treeUnflatten,
+} from "../tree";
 import { unzip2, zip } from "../utils";
 import { pureArray, zerosLike } from "./array";
 import {
@@ -178,11 +182,11 @@ function jvpFlat(
   return unzip2(tracersOut.map((t) => [t.primal, t.tangent]));
 }
 
-export function jvp(
-  f: (...x: any[]) => any,
-  primals: any[],
-  tangents: any[],
-): [any, any] {
+export function jvp<F extends (...x: any[]) => any>(
+  f: F,
+  primals: JsTree<TracerValue>[],
+  tangents: JsTree<TracerValue>[],
+): [ReturnType<F>, ReturnType<F>] {
   const [primalsFlat, inTree] = treeFlatten(primals);
   const [tangentsFlat, inTree2] = treeFlatten(tangents);
   if (!inTree.equals(inTree2)) {
@@ -201,5 +205,5 @@ export function jvp(
   }
   const primalsOut = treeUnflatten(outTree.value, primalsOutFlat);
   const tangentsOut = treeUnflatten(outTree.value, tangentsOutFlat);
-  return [primalsOut, tangentsOut];
+  return [primalsOut as any, tangentsOut as any];
 }

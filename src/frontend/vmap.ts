@@ -24,7 +24,12 @@ import {
   transpose,
   TreeMismatchError,
 } from "./core";
-import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
+import {
+  JsTree,
+  JsTreeDef,
+  flatten as treeFlatten,
+  unflatten as treeUnflatten,
+} from "../tree";
 import { Jaxpr, jaxprAsFun, makeJaxpr } from "./jaxpr";
 import { jvp } from "./jvp";
 
@@ -301,14 +306,21 @@ function vmapFlat(
 }
 
 export function vmap(
-  f: (...x: any[]) => any,
-  inAxes: any[],
-): (...x: any[]) => any {
+  f: (...x: any[]) => JsTree<TracerValue>,
+  inAxes: number | JsTree<number | null>[] = 0,
+): (...x: JsTree<TracerValue>[]) => JsTree<Tracer> {
   return (...args: any[]) => {
     const [argsFlat, inTree] = treeFlatten(args);
-    const [inAxesFlat, inTree2] = treeFlatten(inAxes);
-    if (!inTree.equals(inTree2)) {
-      throw new TreeMismatchError("vmap", inTree, inTree2);
+    let inAxesFlat: (number | null)[];
+    if (typeof inAxes === "number") {
+      // If mapping over a single axis, just use it for all inputs.
+      inAxesFlat = rep(argsFlat.length, inAxes);
+    } else {
+      let inTree2: JsTreeDef;
+      [inAxesFlat, inTree2] = treeFlatten(inAxes);
+      if (!inTree.equals(inTree2)) {
+        throw new TreeMismatchError("vmap", inTree, inTree2);
+      }
     }
     const [fFlat, outTree] = flattenFun(f, inTree);
     const outsFlat = vmapFlat(fFlat, inAxesFlat, argsFlat);

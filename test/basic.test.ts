@@ -133,6 +133,19 @@ suite("jax.vmap()", () => {
       [33, 44],
     ]);
   });
+
+  test("can take a single axis number", () => {
+    const a = np.array([
+      [1, 2],
+      [3, 4],
+    ]);
+    const b = np.array([
+      [5, 6],
+      [7, 8],
+    ]);
+    expect(vmap(np.dot, 0)(a, b).js()).toEqual([17, 53]);
+    expect(vmap(np.dot, 1)(a, b).js()).toEqual([26, 44]);
+  });
 });
 
 suite("jax.jacfwd()", () => {
