@@ -35,6 +35,9 @@ import { jitCompile } from "./jit";
 
 const JsArray = globalThis.Array;
 
+// Don't realize expression arrays smaller than this size.
+const inlineArrayLimit = 1000;
+
 /**
  * An executable operation that will be dispatched to the backend.
  *
@@ -467,8 +470,23 @@ export class Array extends Tracer {
     }
   }
 
+  #dataInline(): Float32Array | Int32Array {
+    this.#check();
+    const exp = this.#source as AluExp;
+    const ar = new Array(exp, this.#st, this.dtype, getBackend("cpu"));
+    this.dispose();
+    return ar.dataSync();
+  }
+
   /** Realize the array and return it as data. */
   async data(): Promise<Float32Array | Int32Array> {
+    if (
+      this.#source instanceof AluExp &&
+      prod(this.shape) < inlineArrayLimit &&
+      this.backend !== "cpu"
+    ) {
+      return this.#dataInline();
+    }
     this.#realize();
     const pending = this.#pending;
     if (pending) {
@@ -502,6 +520,13 @@ export class Array extends Tracer {
    * recommended for performance reasons, as it will block rendering.
    */
   dataSync(): Float32Array | Int32Array {
+    if (
+      this.#source instanceof AluExp &&
+      prod(this.shape) < inlineArrayLimit &&
+      this.backend !== "cpu"
+    ) {
+      return this.#dataInline();
+    }
     this.#realize();
     for (const p of this.#pending) {
       p.prepareSync();
@@ -694,6 +719,21 @@ function arrayFromData(
   shape: number[],
   { dtype, backend: backendType }: DTypeAndBackend = {},
 ): Array {
+  if (data.length < inlineArrayLimit) {
+    // Check if all elements are of the same value and short-circuit.
+    let allEqual = true;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i] !== data[0]) {
+        allEqual = false;
+        break;
+      }
+    }
+    if (allEqual) {
+      // If all elements are equal, we can use a constant expression.
+      return full(shape, data[0], { dtype, backend: backendType });
+    }
+  }
+
   const backend = getBackend(backendType);
   if (data instanceof Float32Array) {
     if (dtype && dtype !== DType.Float32) {
