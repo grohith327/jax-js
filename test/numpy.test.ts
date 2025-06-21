@@ -8,6 +8,8 @@ import {
 } from "@jax-js/jax";
 import { beforeEach, expect, suite, test } from "vitest";
 
+import { DType } from "../src/alu";
+
 const backendsAvailable = await init();
 
 suite.each(backendTypes)("backend:%s", (backend) => {
@@ -55,6 +57,48 @@ suite.each(backendTypes)("backend:%s", (backend) => {
         [0, 2, 0],
         [0, 0, 3],
       ]);
+    });
+  });
+
+  suite("jax.numpy.arange()", () => {
+    test("can be called with 1 argument", () => {
+      let x = np.arange(5);
+      expect(x.js()).toEqual([0, 1, 2, 3, 4]);
+
+      x = np.arange(0);
+      expect(x.js()).toEqual([]);
+
+      x = np.arange(-10);
+      expect(x.js()).toEqual([]);
+    });
+
+    test("can be called with 2 arguments", () => {
+      let x = np.arange(50, 60);
+      expect(x.js()).toEqual([50, 51, 52, 53, 54, 55, 56, 57, 58, 59]);
+
+      x = np.arange(-10, -5);
+      expect(x.js()).toEqual([-10, -9, -8, -7, -6]);
+    });
+
+    test("can be called with 3 arguments", () => {
+      let x = np.arange(0, 10, 2);
+      expect(x.js()).toEqual([0, 2, 4, 6, 8]);
+
+      x = np.arange(10, 0, -2);
+      expect(x.js()).toEqual([10, 8, 6, 4, 2]);
+
+      x = np.arange(0, -10, -2);
+      expect(x.js()).toEqual([0, -2, -4, -6, -8]);
+    });
+
+    test("works with non-integer step", () => {
+      // By default, it uses Int32 dtype, so this rounds down.
+      let x = np.arange(0, 1, 0.2);
+      expect(x.js()).toEqual([0, 0, 0, 0, 0]);
+
+      // Explicitly set dtype to Float32.
+      x = np.arange(0, 1, 0.2, { dtype: DType.Float32 });
+      expect(x).toBeAllclose([0, 0.2, 0.4, 0.6, 0.8]);
     });
   });
 

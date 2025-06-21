@@ -1,7 +1,8 @@
 import { DType } from "./alu";
 import {
-  array,
+  arange,
   Array,
+  array,
   eye,
   full,
   identity,
@@ -15,7 +16,18 @@ import { jit } from "./frontend/jaxpr";
 import * as vmapModule from "./frontend/vmap";
 import { deepEqual, prod, range, rep } from "./utils";
 
-export { Array, array, DType, eye, identity, scalar, zeros, ones, full };
+export {
+  arange,
+  Array,
+  array,
+  DType,
+  eye,
+  identity,
+  scalar,
+  zeros,
+  ones,
+  full,
+};
 
 export const float32 = DType.Float32;
 export const int32 = DType.Int32;

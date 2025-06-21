@@ -71,6 +71,16 @@ export class AluExp {
     return new AluExp(AluOp.Where, a.dtype, [cond, a, b]);
   }
   static const(dtype: DType, value: any): AluExp {
+    if (dtype === DType.Bool) {
+      value = Number(Boolean(value));
+    } else if (dtype === DType.Int32) {
+      value = Math.trunc(value);
+    }
+    if (typeof value !== "number") {
+      throw new TypeError(
+        `Expected a number for constant, got ${typeof value}: ${value}`,
+      );
+    }
     return new AluExp(AluOp.Const, dtype, [], value);
   }
   static special(dtype: DType, name: string, n: number): AluExp {

@@ -858,6 +858,49 @@ export function identity(
   return eye(n, n, { dtype, backend });
 }
 
+/**
+ * Return evenly spaced values within a given interval.
+ *
+ * This can be called with a varying number of arguments, just like the range()
+ * builtin function in Python.
+ *
+ * - `arange(stop)` is equivalent to `arange(0, stop, 1)`.
+ * - `arange(start, stop)` is equivalent to `arange(start, stop, 1)`.
+ * - `arange(start, stop, step)` creates an array starting at `start`, ending
+ *   before `stop`, with a step size of `step`.
+ *
+ * Defaults to an integer data type. This can produce unintended results when
+ * using a non-integer step, so prefer linspace() in those cases.
+ */
+export function arange(
+  start: number,
+  stop?: number,
+  step: number = 1,
+  { dtype, backend }: DTypeAndBackend = {},
+) {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
+  }
+  if (step === 0) {
+    throw new RangeError(
+      `Invalid step for arange: ${step}. Step must be non-zero.`,
+    );
+  }
+  const size = Math.max(0, Math.ceil((stop - start) / step));
+  if (size === 0) {
+    return zeros([0], { dtype, backend });
+  }
+
+  dtype = dtype ?? DType.Int32; // default to int32 for arange
+  const exp = AluExp.add(
+    AluExp.const(dtype, start),
+    AluExp.mul(AluExp.cast(dtype, AluVar.idx), AluExp.const(dtype, step)),
+  );
+  const st = ShapeTracker.fromShape([size]);
+  return new Array(exp, st, dtype, getBackend(backend));
+}
+
 /** Translate a `CompareOp` into an `AluExp` on two sub-expressions. */
 export function aluCompare(a: AluExp, b: AluExp, op: CompareOp): AluExp {
   switch (op) {
