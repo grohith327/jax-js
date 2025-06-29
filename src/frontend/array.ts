@@ -104,6 +104,7 @@ export class PendingExecute {
   }
 }
 
+/** @inline */
 type DTypeAndDevice = { dtype?: DType; device?: Device };
 
 /**
@@ -127,6 +128,7 @@ export class Array extends Tracer {
   #rc: number; // reference count for this specific Array object
   #pendingSet: Set<PendingExecute> | null; // only if source is `Slot`
 
+  /** @ignore */
   constructor(
     source: AluExp | Slot,
     st: ShapeTracker,
@@ -148,6 +150,7 @@ export class Array extends Tracer {
     }
   }
 
+  /** @ignore */
   get aval() {
     return new ShapedArray(this.#st.shape, this.#dtype);
   }

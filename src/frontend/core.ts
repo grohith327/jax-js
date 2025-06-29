@@ -229,6 +229,7 @@ export interface AbstractValue {
 }
 
 export abstract class Tracer {
+  /** @ignore */
   readonly _trace: Trace;
 
   constructor(trace: Trace) {
@@ -298,6 +299,7 @@ export abstract class Tracer {
     return this.shape.length;
   }
 
+  /** @ignore */
   fullLower(): Tracer {
     return this; // default implementation
   }

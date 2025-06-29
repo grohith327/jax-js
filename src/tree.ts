@@ -1,4 +1,4 @@
-/** @file Utilities for working with tree-like container data structures ("pytrees"). */
+// Utilities for working with tree-like container data structures ("pytrees").
 
 import { deepEqual, unzip2 } from "./utils";
 

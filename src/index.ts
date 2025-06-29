@@ -14,6 +14,7 @@ import "./polyfills";
 export { init, type Device, devices, nn, numpy, setDevice, tree };
 
 // Assert that a function's arguments are a subtype of the given type.
+/** @inline */
 type WithArgsSubtype<F extends (args: any[]) => any, T> =
   Parameters<F> extends T ? F : never;
 

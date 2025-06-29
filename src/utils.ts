@@ -181,6 +181,7 @@ export function findPow2(hint: number, max: number): number {
   return ret;
 }
 
+/** @inline */
 export type RecursiveArray<T> = T | RecursiveArray<T>[];
 
 export function recursiveFlatten<T>(ar: RecursiveArray<T>): T[] {
