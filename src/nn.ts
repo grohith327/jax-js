@@ -1,6 +1,7 @@
 // Common functions for neural network libraries, mirroring `jax.nn` in JAX.
 
-import { fudgeArray } from "./frontend/array";
+import { fudgeArray, ones, zeros } from "./frontend/array";
+import { broadcast, stopGradient } from "./frontend/core";
 import {
   absolute,
   Array,
@@ -8,10 +9,12 @@ import {
   clip,
   exp,
   log,
+  max,
   maximum,
   negative,
   reciprocal,
 } from "./numpy";
+import { range } from "./utils";
 
 /**
  * Rectified Linear Unit (ReLU) activation function:
@@ -93,3 +96,82 @@ export function logSigmoid(x: ArrayLike): Array {
 
 /** Identity activation function. Returns the argument unmodified. */
 export const identity = fudgeArray;
+
+/**
+ * Softmax function. Computes the function which rescales elements to the range
+ * [0, 1] such that the elements along `axis` sum to 1.
+ *
+ * If `axis` is not specified, it defaults to the last axis.
+ *
+ * Reference: https://en.wikipedia.org/wiki/Softmax_function
+ */
+export function softmax(x: ArrayLike, axis?: number | number[]): Array {
+  x = fudgeArray(x);
+  if (axis === undefined) {
+    axis = x.ndim ? [x.ndim - 1] : []; // default to last axis
+  } else if (typeof axis === "number") {
+    axis = [axis];
+  }
+
+  if (axis.length === 0) {
+    x.dispose();
+    return ones(x.shape); // scalar case, return ones
+  }
+
+  const xMax = broadcast(max(x.ref, axis), x.shape, axis); // keep dims
+  const unnormalized = exp(x.sub(stopGradient(xMax)));
+  return unnormalized.ref.div(broadcast(unnormalized.sum(axis), x.shape, axis));
+}
+
+/**
+ * Log-Softmax function.
+ *
+ * Computes the logarithm of the `softmax` function, which rescales elements to
+ * the range [-infinity, 0).
+ *
+ * If `axis` is not specified, it defaults to the last axis.
+ */
+export function logSoftmax(x: ArrayLike, axis?: number | number[]): Array {
+  x = fudgeArray(x);
+  if (axis === undefined) {
+    axis = x.ndim ? [x.ndim - 1] : []; // default to last axis
+  } else if (typeof axis === "number") {
+    axis = [axis];
+  }
+
+  if (axis.length === 0) {
+    x.dispose();
+    return zeros(x.shape); // scalar case, return log(1)
+  }
+
+  const xMax = broadcast(max(x.ref, axis), x.shape, axis); // keep dims
+  const shifted = x.sub(stopGradient(xMax));
+  const shiftedLogsumexp = log(
+    broadcast(exp(shifted.ref).sum(axis), x.shape, axis) as Array,
+  );
+  return shifted.sub(shiftedLogsumexp);
+}
+
+/**
+ * Log-sum-exp reduction. Also a multivariate version of `softplus`.
+ *
+ * If no axis is specified, the reduction is performed over all elements. This
+ * convention differs from `jax.nn.logSoftmax()`.
+ *
+ * Reference: https://en.wikipedia.org/wiki/LogSumExp
+ */
+export function logsumexp(x: ArrayLike, axis?: number | number[]): Array {
+  x = fudgeArray(x);
+  if (axis === undefined) {
+    axis = range(x.ndim); // default to all axes
+  } else if (typeof axis === "number") {
+    axis = [axis];
+  }
+
+  if (axis.length === 0) return x;
+
+  const xMax = stopGradient(max(x.ref, axis)) as Array;
+  const xMaxDims = broadcast(xMax.ref, x.shape, axis); // keep dims
+  const shifted = x.sub(xMaxDims);
+  return xMax.add(log(exp(shifted).sum(axis)));
+}

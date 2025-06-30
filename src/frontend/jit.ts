@@ -377,6 +377,7 @@ const jitRules: Partial<{ [P in Primitive]: JitRule<P> }> = {
     AluExp.sub(AluExp.const(a.dtype, 0), a),
   ),
   [Primitive.Reciprocal]: broadcastedJit(([a]) => AluExp.reciprocal(a)),
+  [Primitive.StopGradient]: broadcastedJit(([a]) => a), // No-op, just return the input.
   [Primitive.Sin]: broadcastedJit(([a]) => AluExp.sin(a)),
   [Primitive.Cos]: broadcastedJit(([a]) => AluExp.cos(a)),
   [Primitive.Exp]: broadcastedJit(([a]) => AluExp.exp(a)),

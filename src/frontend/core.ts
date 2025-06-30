@@ -15,6 +15,7 @@ export enum Primitive {
   Idiv = "idiv",
   Neg = "neg",
   Reciprocal = "reciprocal",
+  StopGradient = "stop_gradient",
   Sin = "sin",
   Cos = "cos",
   Exp = "exp",
@@ -75,6 +76,10 @@ export function neg(x: TracerValue) {
 
 export function reciprocal(x: TracerValue) {
   return bind1(Primitive.Reciprocal, [x]);
+}
+
+export function stopGradient(x: TracerValue) {
+  return bind1(Primitive.StopGradient, [x]);
 }
 
 export function sin(x: TracerValue) {

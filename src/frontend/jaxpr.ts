@@ -683,6 +683,7 @@ export const abstractEvalRules: { [P in Primitive]: AbstractEvalRule<P> } = {
   [Primitive.Idiv]: binopAbstractEval,
   [Primitive.Neg]: vectorizedUnopAbstractEval,
   [Primitive.Reciprocal]: vectorizedUnopAbstractEval,
+  [Primitive.StopGradient]: vectorizedUnopAbstractEval,
   [Primitive.Sin]: vectorizedUnopAbstractEval,
   [Primitive.Cos]: vectorizedUnopAbstractEval,
   [Primitive.Exp]: vectorizedUnopAbstractEval,

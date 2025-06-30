@@ -121,6 +121,11 @@ const jvpRules: { [P in Primitive]: JvpRule<P> } = {
     const xRecip = reciprocal(x.ref);
     return [[xRecip.ref], [neg(xRecip.ref.mul(xRecip)).mul(dx)]];
   },
+  [Primitive.StopGradient]([x], [dx]) {
+    dx.dispose();
+    const zeroGradient = zerosLike(x); // Stop gradient flows for x.
+    return [[x], [zeroGradient]];
+  },
   [Primitive.Sin]([x], [dx]) {
     return [[sin(x.ref)], [cos(x).mul(dx)]];
   },

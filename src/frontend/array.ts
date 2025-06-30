@@ -575,6 +575,9 @@ export class Array extends Tracer {
       [Primitive.Reciprocal]([x]) {
         return [x.#unary(AluOp.Reciprocal)];
       },
+      [Primitive.StopGradient]([x]) {
+        return [x]; // Stop gradient is a no-op, just return the input.
+      },
       [Primitive.Sin]([x]) {
         return [x.#unary(AluOp.Sin)];
       },
