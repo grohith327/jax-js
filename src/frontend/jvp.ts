@@ -24,11 +24,13 @@ import {
   neg,
   newMain,
   notEqual,
+  pad,
   Primitive,
   PrimitiveParams,
   reciprocal,
   reduce,
   reshape,
+  shrink,
   sin,
   Trace,
   Tracer,
@@ -195,6 +197,12 @@ const jvpRules: { [P in Primitive]: JvpRule<P> } = {
   },
   [Primitive.Flip]([x], [dx], { axis }) {
     return [[flip(x, axis)], [flip(dx, axis)]];
+  },
+  [Primitive.Shrink]([x], [dx], { slice }) {
+    return [[shrink(x, slice)], [shrink(dx, slice)]];
+  },
+  [Primitive.Pad]([x], [dx], { width }) {
+    return [[pad(x, width)], [pad(dx, width)]];
   },
   [Primitive.JitCall](primals, tangents, { jaxpr }) {
     const { newJaxpr, newConsts } = jvpJaxpr(jaxpr);

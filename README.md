@@ -62,13 +62,14 @@ npm test
 
 ## Next on Eric's mind
 
-- one_hot
+- one_hot: charles pointed out that this can be done by adv. indexing into identity()
 - Probably add static_argnums to jit() so that clip and some nn functions have jit added
 - Start working on first neural network
 - Investigate why jax-js Matmul is 2x slower on Safari TP than unroll kernel
 - How many threads to create per workgroup, depends on hardware
   - Need to break up kernel dispatches if workgroup count exceeds 65536
 - Think about two-stage `cumsum()`
+- Lazy type conversions on arrays via views
 - Frontend transformations need to match backend type for pureArray() and zeros() calls
 
 ## Milestones

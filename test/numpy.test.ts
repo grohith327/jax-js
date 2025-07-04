@@ -666,4 +666,57 @@ suite.each(devices)("device:%s", (device) => {
       expect(dx.js()).toEqual([0.5, 0, 0, 0.5]); // Gradient is 1 at the maximum
     });
   });
+
+  suite("jax.numpy.pad()", () => {
+    test("pads an array equally", () => {
+      const a = np.array([1, 2, 3]);
+      const b = np.pad(a, 1);
+      expect(b.js()).toEqual([0, 1, 2, 3, 0]);
+
+      const c = np.array([
+        [1, 2],
+        [3, 4],
+      ]);
+      const d = np.pad(c, 1);
+      expect(d.js()).toEqual([
+        [0, 0, 0, 0],
+        [0, 1, 2, 0],
+        [0, 3, 4, 0],
+        [0, 0, 0, 0],
+      ]);
+    });
+
+    test("pads an array with uneven widths", () => {
+      const a = np.array([[1]]);
+      const b = np.pad(a, [
+        [1, 2],
+        [3, 0],
+      ]);
+      expect(b.js()).toEqual([
+        [0, 0, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ]);
+    });
+
+    test("raises TypeError on axis mismatch", () => {
+      const a = np.zeros([1, 2, 3]);
+      expect(() => np.pad(a, [])).toThrow(TypeError);
+      expect(() => np.pad(a, [[0, 1]])).not.toThrow(TypeError);
+      expect(() =>
+        np.pad(a, [
+          [0, 1],
+          [1, 2],
+        ]),
+      ).toThrow(TypeError);
+    });
+
+    test("pad handles backprop", () => {
+      const a = np.array([1, 2, 3]);
+      expect(grad((x: np.Array) => np.pad(x, 1).sum())(a).js()).toEqual([
+        1, 1, 1,
+      ]);
+    });
+  });
 });

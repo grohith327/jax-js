@@ -86,6 +86,16 @@ export function lexCompare(a: number[], b: number[]): number {
   return a.length - b.length;
 }
 
+/** Check if an object is a number pair, i.e., a tuple of two numbers. */
+export function isNumberPair(x: unknown): x is [number, number] {
+  return (
+    Array.isArray(x) &&
+    x.length === 2 &&
+    typeof x[0] === "number" &&
+    typeof x[1] === "number"
+  );
+}
+
 export function range(
   start: number,
   stop?: number,

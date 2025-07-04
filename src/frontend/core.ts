@@ -6,7 +6,7 @@ import {
   flatten as treeFlatten,
   unflatten as treeUnflatten,
 } from "../tree";
-import { DEBUG, prod, range } from "../utils";
+import { DEBUG, isNumberPair, prod, range, rep } from "../utils";
 import type { Jaxpr } from "./jaxpr";
 
 export enum Primitive {
@@ -29,6 +29,9 @@ export enum Primitive {
   Broadcast = "broadcast",
   Reshape = "reshape",
   Flip = "flip",
+  Shrink = "shrink",
+  Pad = "pad",
+  // Gather = "gather",  // TODO: Implement gather for advanced indexing.
   JitCall = "jit_call",
 }
 
@@ -40,6 +43,9 @@ interface PrimitiveParamsImpl
   [Primitive.Broadcast]: { shape: number[]; axis: number[] };
   [Primitive.Reshape]: { shape: number[] };
   [Primitive.Flip]: { axis: number[] };
+  [Primitive.Shrink]: { slice: [number, number][] };
+  [Primitive.Pad]: { width: [number, number][] };
+  // [Primitive.Gather]: { axis: number[] };
   [Primitive.JitCall]: { jaxpr: Jaxpr; numConsts: number };
 }
 
@@ -164,6 +170,50 @@ export function reshape(x: TracerValue, shape: number | number[]) {
 
 export function flip(x: TracerValue, axis: number[]) {
   return bind1(Primitive.Flip, [x], { axis });
+}
+
+export function shrink(x: TracerValue, slice: [number, number][]) {
+  const shape = getShape(x);
+  if (!Array.isArray(slice) || !slice.every(isNumberPair)) {
+    throw new TypeError(`Invalid shrink() type: ${JSON.stringify(slice)}`);
+  }
+  if (slice.length !== shape.length) {
+    throw new TypeError(
+      `Invalid shrink(): expected ${shape.length} axes, got ${slice.length}`,
+    );
+  }
+  for (let i = 0; i < shape.length; i++) {
+    const [start, end] = slice[i];
+    if (start > end || start < 0 || end > shape[i]) {
+      throw new TypeError(
+        `Invalid shrink() slice for axis ${i}: [${start}, ${end}] on shape ${shape[i]}`,
+      );
+    }
+  }
+  return bind1(Primitive.Shrink, [x], { slice });
+}
+
+export function pad(
+  x: TracerValue,
+  width: number | [number, number] | [number, number][],
+) {
+  const nd = ndim(x);
+  if (typeof width === "number") {
+    width = [[width, width]];
+  } else if (isNumberPair(width)) {
+    width = [width as [number, number]];
+  } else if (!Array.isArray(width) || !width.every(isNumberPair)) {
+    throw new TypeError(`Invalid pad() type: ${JSON.stringify(width)}`);
+  }
+  if (width.length === 1) {
+    const [w0, w1] = width[0]; // A single pair should be repeated for all axes.
+    width = rep(nd, () => [w0, w1] as [number, number]);
+  } else if (width.length !== nd) {
+    throw new TypeError(
+      `Invalid pad(): expected ${nd} axes, got ${width.length}`,
+    );
+  }
+  return bind1(Primitive.Pad, [x], { width });
 }
 
 export function reduce(x: TracerValue, op: AluOp, axis?: number | number[]) {
@@ -373,6 +423,8 @@ export abstract class Tracer {
   reshape(shape: number | number[]): this {
     return reshape(this, shape) as this;
   }
+
+  // TODO: slice();
 
   // Below this line are composite operations built from primitives.
 

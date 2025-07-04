@@ -117,10 +117,22 @@ export const transpose = core.transpose as (
  * length of the array and remaining dimensions.
  */
 export const reshape = core.reshape as (x: ArrayLike, shape: number[]) => Array;
+/** Move axes of an array to new positions. Other axes retain original order. */
 export const moveaxis = vmapModule.moveaxis as (
   x: ArrayLike,
   src: number,
   dst: number,
+) => Array;
+/**
+ * Add padding (zeros) to an array.
+ *
+ * The `width` argument is either an integer or pair of integers, in which case
+ * all axes are padded with the same width. Or if it is an array of pairs, each
+ * pair specifies the padding for its corresponding axis.
+ */
+export const pad = core.pad as (
+  x: ArrayLike,
+  width: number | [number, number] | [number, number][],
 ) => Array;
 
 /** Return the number of dimensions of an array. Does not consume array reference. */

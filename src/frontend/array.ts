@@ -622,6 +622,12 @@ export class Array extends Tracer {
         for (const ax of axis) arg[ax] = true;
         return [x.#reshape(x.#st.flip(arg))];
       },
+      [Primitive.Shrink]([x], { slice }) {
+        return [x.#reshape(x.#st.shrink(slice))];
+      },
+      [Primitive.Pad]([x], { width }) {
+        return [x.#reshape(x.#st.pad(width))];
+      },
       [Primitive.JitCall](args, { jaxpr, numConsts }) {
         if (jaxpr.inBinders.length !== args.length) {
           throw new Error(

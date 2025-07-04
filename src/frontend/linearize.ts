@@ -16,11 +16,13 @@ import {
   ndim,
   neg,
   newMain,
+  pad,
   Primitive,
   PrimitiveParams,
   reduce,
   reshape,
   ShapedArray,
+  shrink,
   Trace,
   Tracer,
   TracerValue,
@@ -672,6 +674,20 @@ const transposeRules: Partial<{ [P in Primitive]: TransposeRule<P> }> = {
   [Primitive.Flip]([ct], [x], { axis }) {
     if (!(x instanceof UndefPrimal)) throw new NonlinearError(Primitive.Flip);
     return [flip(ct, axis)];
+  },
+  [Primitive.Shrink]([ct], [x], { slice }) {
+    if (!(x instanceof UndefPrimal)) throw new NonlinearError(Primitive.Shrink);
+    const width = slice.map(
+      ([s, e], i) => [s, x.aval.shape[i] - e] as [number, number],
+    );
+    return [pad(ct, width)];
+  },
+  [Primitive.Pad]([ct], [x], { width }) {
+    if (!(x instanceof UndefPrimal)) throw new NonlinearError(Primitive.Pad);
+    const slice = width.map(
+      ([s, _e], i) => [s, s + x.aval.shape[i]] as [number, number],
+    );
+    return [shrink(ct, slice)];
   },
   [Primitive.JitCall](cts, args, { jaxpr }) {
     // We need this one because the jvp() rule for JitCall generates a JitCall

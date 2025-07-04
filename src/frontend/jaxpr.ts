@@ -724,6 +724,14 @@ export const abstractEvalRules: { [P in Primitive]: AbstractEvalRule<P> } = {
   [Primitive.Flip]([x], _) {
     return [new ShapedArray(x.shape, x.dtype)];
   },
+  [Primitive.Shrink]([x], { slice }) {
+    const newShape = slice.map((s) => s[1] - s[0]);
+    return [new ShapedArray(newShape, x.dtype)];
+  },
+  [Primitive.Pad]([x], { width }) {
+    const newShape = x.shape.map((dim, i) => dim + width[i][0] + width[i][1]);
+    return [new ShapedArray(newShape, x.dtype)];
+  },
   [Primitive.JitCall](args, { jaxpr }) {
     const { inTypes, outTypes } = typecheckJaxpr(jaxpr);
     if (args.length !== inTypes.length) {
