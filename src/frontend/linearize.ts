@@ -2,7 +2,14 @@
 
 import { AluOp, DType } from "../alu";
 import { flatten as treeFlatten, unflatten as treeUnflatten } from "../tree";
-import { invertPermutation, partitionList, toposort, unzip2 } from "../utils";
+import {
+  deepEqual,
+  invertPermutation,
+  partitionList,
+  range,
+  toposort,
+  unzip2,
+} from "../utils";
 import { eye, pureArray, scalar, zeros } from "./array";
 import {
   AbstractValue,
@@ -579,6 +586,51 @@ function evalJaxprTransposed(
   return results;
 }
 
+/**
+ * Inverse operation of `generalBroadcast()` for backpropagation.
+ *
+ * `x` has the shape of the result of an operation that was broadcasted with
+ * `target` (it's a cotangent during backprop). Returns a tracer with rank and
+ * shape equal to `target`.
+ */
+function unbroadcast(x: Tracer, target: UndefPrimal): Tracer {
+  const shape = target.aval.shape;
+
+  // 1. Remove extra dimensions from x, if any.
+  //    x can either have rank == target.ndim (fine!), or rank > target.ndim.
+  //    In the latter case, we need to trim off extra dimensions on the left.
+  const extraDims = x.ndim > shape.length ? range(x.ndim - shape.length) : [];
+  if (x.ndim < shape.length) {
+    throw new Error(
+      `unbroadcast: x.ndim (${x.shape}) < target.ndim (${shape})`,
+    );
+  }
+
+  // 2. Reduce (but keep) dimensions of x that are 1 in target.
+  const unsqueeze: number[] = [];
+  const keptReduceDims: number[] = [];
+  for (let i = 0; i < shape.length; i++) {
+    // i is indexed according to target.
+    const indexFromEnd = shape.length - i; // >= 1
+    const indexInX = x.ndim - indexFromEnd;
+    const xLen = x.shape[indexInX];
+    if (xLen > 1 && shape[i] === 1) {
+      unsqueeze.push(i);
+      keptReduceDims.push(indexInX);
+    } else if (shape[i] !== xLen) {
+      throw new Error("internal: unbroadcast shape mismatch");
+    }
+  }
+
+  const reductionDims = [...extraDims, ...keptReduceDims];
+  if (reductionDims.length === 0) return x;
+  let result = x.sum(reductionDims);
+  if (!deepEqual(result.shape, shape)) {
+    result = broadcast(result, shape, unsqueeze); // keep dims selectively
+  }
+  return result;
+}
+
 class NonlinearError extends TypeError {
   constructor(primitive: Primitive) {
     super(`Nonlinear operation in backward pass for ${primitive}`);
@@ -599,12 +651,11 @@ type TransposeRule<P extends Primitive> = (
 // that are UndefPrimal (i.e., tangents that weren't sent forward).
 const transposeRules: Partial<{ [P in Primitive]: TransposeRule<P> }> = {
   [Primitive.Mul]([ct], [x, y]) {
-    // BUG: Doesn't handle broadcasting.
     if (x instanceof UndefPrimal === y instanceof UndefPrimal)
       throw new NonlinearError(Primitive.Mul);
     return [
-      x instanceof UndefPrimal ? mul(ct, y as Tracer) : null,
-      y instanceof UndefPrimal ? mul(x as Tracer, ct) : null,
+      x instanceof UndefPrimal ? unbroadcast(mul(ct, y as Tracer), x) : null,
+      y instanceof UndefPrimal ? unbroadcast(mul(x as Tracer, ct), y) : null,
     ];
   },
   [Primitive.Neg]([ct], [x]) {
@@ -612,14 +663,13 @@ const transposeRules: Partial<{ [P in Primitive]: TransposeRule<P> }> = {
     return [neg(ct)];
   },
   [Primitive.Add]([ct], [x, y]) {
-    // BUG: Doesn't handle broadcasting.
     if (!(x instanceof UndefPrimal || y instanceof UndefPrimal))
       throw new NonlinearError(Primitive.Add);
     if (x instanceof UndefPrimal && y instanceof UndefPrimal)
-      return [ct.ref, ct];
+      return [unbroadcast(ct.ref, x), unbroadcast(ct, y)];
     return x instanceof UndefPrimal
-      ? ((y as Tracer).dispose(), [ct, null])
-      : ((x as Tracer).dispose(), [null, ct]);
+      ? ((y as Tracer).dispose(), [unbroadcast(ct, x), null])
+      : ((x as Tracer).dispose(), [null, unbroadcast(ct, y as UndefPrimal)]);
   },
   [Primitive.Reduce]([ct], [x], { op, axis }) {
     if (!(x instanceof UndefPrimal)) throw new NonlinearError(Primitive.Reduce);
@@ -631,22 +681,17 @@ const transposeRules: Partial<{ [P in Primitive]: TransposeRule<P> }> = {
       throw new NonlinearError(Primitive.Reduce);
     }
   },
-  // BUG: Doesn't handle broadcasting.
   [Primitive.Where]([ct], [cond, x, y]) {
     // Cotangent should be zero where cond doesn't apply.
     const cts: (Tracer | null)[] = [null, null, null];
     if (cond instanceof UndefPrimal) throw new NonlinearError(Primitive.Where);
     if (x instanceof UndefPrimal) {
-      // TODO: Use correct backend.
-      const zerosX = zeros(x.aval.shape, { dtype: x.aval.dtype });
-      cts[1] = where(cond.ref, ct.ref, zerosX);
+      cts[1] = unbroadcast(where(cond.ref, ct.ref, 0), x);
     } else {
       x.dispose();
     }
     if (y instanceof UndefPrimal) {
-      // TODO: Use correct backend.
-      const zerosY = zeros(x.aval.shape, { dtype: x.aval.dtype });
-      cts[2] = where(cond.ref, zerosY, ct.ref);
+      cts[2] = unbroadcast(where(cond.ref, 0, ct.ref), y);
     } else {
       y.dispose();
     }

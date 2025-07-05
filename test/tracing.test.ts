@@ -165,6 +165,22 @@ suite("jax.grad()", () => {
     const gradProd = grad((x: np.Array) => np.prod(x))(x);
     expect(gradProd.js()).toEqual([24, 12, 8, 6]);
   });
+
+  test("backprops through auto-broadcast", () => {
+    const [dx, dy] = grad(([x, y]: [np.Array, np.Array]) => x.mul(y).sum())([
+      np.array([[2], [4]]),
+      np.array([4, 5, 6]),
+    ]);
+    expect(dx.js()).toEqual([[15], [15]]);
+    expect(dy.js()).toEqual([6, 6, 6]);
+
+    const [dx2, dy2] = grad(([x, y]: [np.Array, np.Array]) => x.add(y).sum())([
+      np.array([[2], [4]]),
+      np.array([4, 5, 6]),
+    ]);
+    expect(dx2.js()).toEqual([[3], [3]]);
+    expect(dy2.js()).toEqual([2, 2, 2]);
+  });
 });
 
 suite("jax.jit()", () => {
