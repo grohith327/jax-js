@@ -1,6 +1,6 @@
 // Common functions for neural network libraries, mirroring `jax.nn` in JAX.
 
-import { fudgeArray, ones, zeros } from "./frontend/array";
+import { eye, fudgeArray, ones, zeros } from "./frontend/array";
 import { broadcast, stopGradient } from "./frontend/core";
 import {
   absolute,
@@ -174,4 +174,27 @@ export function logsumexp(x: ArrayLike, axis?: number | number[]): Array {
   const xMaxDims = broadcast(xMax.ref, x.shape, axis); // keep dims
   const shifted = x.sub(xMaxDims);
   return xMax.add(log(exp(shifted).sum(axis)));
+}
+
+/**
+ * One-hot encodes the given indices.
+ *
+ * Each index in the integer input `x` is encoded as a vector of zeros of length
+ * `numClasses`, with a 1 at the index position specified by its value.
+ *
+ * ```js
+ * import { nn, numpy as np } from '@jax-js/jax';
+ *
+ * nn.oneHot(np.array([1, 1, 2], { dtype: np.int32 }), 3);
+ * // Output:
+ * // [[0, 1, 0],
+ * //  [0, 1, 0],
+ * //  [0, 0, 1]]
+ * ```
+ */
+export function oneHot(x: Array, numClasses: number): Array {
+  if (x.dtype !== "int32") {
+    throw new TypeError(`oneHot expects integers, got ${x.dtype}`);
+  }
+  return eye(numClasses, undefined, { device: x.device }).slice(x);
 }

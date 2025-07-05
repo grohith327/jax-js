@@ -130,4 +130,37 @@ suite.each(devices)("device:%s", (device) => {
       expect(z.js()).toBeCloseTo(8.45834);
     });
   });
+
+  suite("jax.nn.oneHot()", () => {
+    test("does basic one-hot encoding", () => {
+      const x = np.array([1, 1, 2], { dtype: np.int32 });
+      const y = nn.oneHot(x, 3);
+      expect(y.js()).toEqual([
+        [0, 1, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+      ]);
+    });
+
+    test("takes multi-dimensional input", () => {
+      const x = np.array(
+        [
+          [0, 1],
+          [2, 1],
+        ],
+        { dtype: np.int32 },
+      );
+      const y = nn.oneHot(x, 3);
+      expect(y.js()).toEqual([
+        [
+          [1, 0, 0],
+          [0, 1, 0],
+        ],
+        [
+          [0, 0, 1],
+          [0, 1, 0],
+        ],
+      ]);
+    });
+  });
 });
