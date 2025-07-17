@@ -237,13 +237,19 @@ function pipelineSource(device: GPUDevice, kernel: Kernel): ShaderInfo {
     }
   };
 
-  // Prelude included in all shaders.
+  // Global functions at the start of the shader..
   emit(
     // Const-folded infinity and NaN result in compile errors.
     "fn nan() -> f32 { let bits = 0xffffffffu; return bitcast<f32>(bits); }",
     "fn inf() -> f32 { let bits = 0x7f800000u; return bitcast<f32>(bits); }",
-    "",
   );
+
+  if (tune.exp.collect((exp) => exp.op === AluOp.Threefry2x32).length > 0) {
+    emit(threefrySrc);
+  }
+
+  // End global function definitions.
+  emit("");
 
   const usedArgs: (DType | null)[] = Array.from({ length: nargs }, () => null);
   tune.exp.fold((exp) => {
@@ -353,6 +359,8 @@ function pipelineSource(device: GPUDevice, kernel: Kernel): ShaderInfo {
     } else if (op === AluOp.Where) {
       // select(f, t, cond) -> cond ? t : f
       source = `select(${strip1(gen(src[2]))}, ${strip1(gen(src[1]))}, ${strip1(gen(src[0]))})`;
+    } else if (op === AluOp.Threefry2x32) {
+      source = `threefry2x32(${src.map((x) => strip1(gen(x))).join(", ")})`;
     } else if (op === AluOp.Const) {
       return constToWgsl(dtype, arg);
     } else if (op === AluOp.Special) {
@@ -740,3 +748,51 @@ class SyncReader {
     return valsGPU;
   }
 }
+
+// Port of the JavaScript `threefry2x32()` function, see alu.ts for details.
+const threefrySrc = `
+fn threefry2x32(key: vec2<u32>, ctr: vec2<u32>) -> vec2<u32> {
+  let ks0: u32 = key.x;
+  let ks1: u32 = key.y;
+  let ks2: u32 = ks0 ^ ks1 ^ 0x1BD11BDAu;
+
+  var x0: u32 = ctr.x + ks0;
+  var x1: u32 = ctr.y + ks1;
+
+  x0 += x1; x1 = (x1 << 13u) | (x1 >> 19u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 15u) | (x1 >> 17u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 26u) | (x1 >> 6u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 6u) | (x1 >> 26u); x1 ^= x0;
+  x0 += ks1;
+  x1 += ks2 + 1u;
+
+  x0 += x1; x1 = (x1 << 17u) | (x1 >> 15u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 29u) | (x1 >> 3u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 16u) | (x1 >> 16u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 24u) | (x1 >> 8u); x1 ^= x0;
+  x0 += ks2;
+  x1 += ks0 + 2u;
+
+  x0 += x1; x1 = (x1 << 13u) | (x1 >> 19u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 15u) | (x1 >> 17u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 26u) | (x1 >> 6u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 6u) | (x1 >> 26u); x1 ^= x0;
+  x0 += ks0;
+  x1 += ks1 + 3u;
+
+  x0 += x1; x1 = (x1 << 17u) | (x1 >> 15u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 29u) | (x1 >> 3u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 16u) | (x1 >> 16u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 24u) | (x1 >> 8u); x1 ^= x0;
+  x0 += ks1;
+  x1 += ks2 + 4u;
+
+  x0 += x1; x1 = (x1 << 13u) | (x1 >> 19u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 15u) | (x1 >> 17u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 26u) | (x1 >> 6u); x1 ^= x0;
+  x0 += x1; x1 = (x1 << 6u) | (x1 >> 26u); x1 ^= x0;
+  x0 += ks2;
+  x1 += ks0 + 5u;
+
+  return vec2<u32>(x0, x1);
+}`;

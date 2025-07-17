@@ -45,19 +45,20 @@ export class AluExp implements FpHashable {
     readonly src: AluExp[],
     readonly arg: any = undefined,
   ) {
-    if (AluGroup.RequiredFloat.has(op) && !isFloatDtype(dtype)) {
+    if (AluGroup.RequiredFloat.has(op) && !isFloatDtype(dtype))
       throw new TypeError(`Unsupported dtype for ${op}: ${dtype}`);
-    }
     if (
       op === AluOp.Bitcast &&
       (dtype === DType.Bool ||
         src[0].dtype === DType.Bool ||
         byteWidth(dtype) !== byteWidth(src[0].dtype))
-    ) {
-      throw new TypeError(
-        `Bitcast from ${src[0].dtype} to ${dtype} is not supported`,
-      );
-    }
+    )
+      throw new TypeError(`Bitcast from ${src[0].dtype} -> ${dtype}`);
+    if (
+      op === AluOp.Threefry2x32 &&
+      (dtype !== DType.Uint32 || src.some((x) => x.dtype !== DType.Uint32))
+    )
+      throw new TypeError("Threefry2x32 requires uint32 types");
   }
 
   static add(a: AluExp, b: AluExp): AluExp {
@@ -637,6 +638,13 @@ export class AluExp implements FpHashable {
         return this.src[0].evaluate(context, globals)
           ? this.src[1].evaluate(context, globals)
           : this.src[2].evaluate(context, globals);
+      case AluOp.Threefry2x32: {
+        const [k0, k1, c0, c1] = this.src.map((x) =>
+          x.evaluate(context, globals),
+        );
+        const [x0, x1] = threefry2x32(k0, k1, c0, c1);
+        return x0 ^ x1;
+      }
       case AluOp.Const:
         return this.arg;
       case AluOp.Special: {
@@ -803,6 +811,8 @@ export enum AluOp {
   Cmplt = "Cmplt",
   Cmpne = "Cmpne",
   Where = "Where", // Ternary operator: `cond ? a : b`
+
+  Threefry2x32 = "Threefry2x32", // PRNG operation, note that we take x0 ^ x1 as output.
 
   // Const is a literal constant, while GlobalIndex takes data from an array
   // buffer. Special and Variable are distinguished since the former is for
@@ -1059,4 +1069,54 @@ export function accessorAluExp(
     exp.substitute({ idx: index }),
     AluExp.const(dtype, 0),
   );
+}
+
+// Threefry 2x32, 20 rounds (NR = 20)
+// Reference: https://github.com/jax-ml/jax/blob/jax-v0.6.2/jax/_src/prng.py#L869
+function threefry2x32(k0: number, k1: number, c0: number, c1: number) {
+  const rotl32 = (x: number, r: number) => ((x << r) | (x >>> (32 - r))) >>> 0;
+
+  const ks0 = k0 >>> 0;
+  const ks1 = k1 >>> 0;
+  const ks2 = (ks0 ^ ks1 ^ 0x1bd11bda) >>> 0;
+
+  let x0 = (c0 + ks0) >>> 0;
+  let x1 = (c1 + ks1) >>> 0;
+
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 13) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 15) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 26) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 6) ^ x0);
+  x0 = (x0 + ks1) >>> 0;
+  x1 = (x1 + ks2 + 1) >>> 0;
+
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 17) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 29) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 16) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 24) ^ x0);
+  x0 = (x0 + ks2) >>> 0;
+  x1 = (x1 + ks0 + 2) >>> 0;
+
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 13) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 15) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 26) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 6) ^ x0);
+  x0 = (x0 + ks0) >>> 0;
+  x1 = (x1 + ks1 + 3) >>> 0;
+
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 17) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 29) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 16) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 24) ^ x0);
+  x0 = (x0 + ks1) >>> 0;
+  x1 = (x1 + ks2 + 4) >>> 0;
+
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 13) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 15) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 26) ^ x0);
+  (x0 = (x0 + x1) >>> 0), (x1 = rotl32(x1, 6) ^ x0);
+  x0 = (x0 + ks2) >>> 0;
+  x1 = (x1 + ks0 + 5) >>> 0;
+
+  return [x0, x1];
 }

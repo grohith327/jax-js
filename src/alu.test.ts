@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { AluExp, DType } from "./alu";
+import { AluExp, AluOp, DType } from "./alu";
 
 test("AluExp can be evaluated", () => {
   const e = AluExp.i32(3);
@@ -65,7 +65,7 @@ test("AluExp raises TypeError for unsupported dtypes", () => {
   expect(() => AluExp.reciprocal(AluExp.bool(true))).toThrow(TypeError);
 });
 
-test("AluOp.min and AluOp.max", () => {
+test("AluOp.Min and AluOp.Max", () => {
   const a = AluExp.i32(3);
   const b = AluExp.i32(4);
   const minOp = AluExp.min(a, b);
@@ -81,7 +81,7 @@ test("AluOp.min and AluOp.max", () => {
   expect(minOp2.evaluate({ c: 2 })).toBe(2);
 });
 
-test("AluOp.exp", () => {
+test("AluOp.Exp", () => {
   const e = AluExp.exp(AluExp.f32(3));
   expect(e.evaluate({})).toBeCloseTo(Math.E ** 3);
   expect(e.dtype).toBe(DType.Float32);
@@ -90,7 +90,7 @@ test("AluOp.exp", () => {
   expect(e2.evaluate({})).toBeCloseTo(Math.E ** 0.25);
 });
 
-test("AluOp.log", () => {
+test("AluOp.Log", () => {
   const e = AluExp.log(AluExp.f32(8));
   expect(e.evaluate({})).toBeCloseTo(Math.log(8));
   expect(e.dtype).toBe(DType.Float32);
@@ -102,7 +102,7 @@ test("AluOp.log", () => {
   expect(e3.evaluate({})).toBeNaN();
 });
 
-test("AluOp.cast", () => {
+test("AluOp.Cast", () => {
   const e = AluExp.cast(DType.Float32, AluExp.i32(42));
   expect(e.evaluate({})).toBe(42);
   expect(e.dtype).toBe(DType.Float32);
@@ -124,7 +124,7 @@ test("AluOp.cast", () => {
   expect(e5.dtype).toBe(DType.Bool);
 });
 
-test("AluOp.bitcast", () => {
+test("AluOp.Bitcast", () => {
   // Assumes little-endian byte order, which is used in modern browsers.
   const e = AluExp.bitcast(DType.Float32, AluExp.i32(0x3f800000)); // 1.0 in IEEE 754
   expect(e.evaluate({})).toBe(1.0);
@@ -152,4 +152,13 @@ test("AluOp.bitcast", () => {
     TypeError,
   );
   expect(() => AluExp.bitcast(DType.Bool, AluExp.f32(1.0))).toThrow(TypeError);
+});
+
+test("AluOp.Threefry2x32", () => {
+  const k0 = AluExp.u32(0);
+  const k1 = AluExp.u32(0);
+  const c0 = AluExp.u32(0);
+  const c1 = AluExp.u32(0);
+  const exp = new AluExp(AluOp.Threefry2x32, DType.Uint32, [k0, k1, c0, c1]);
+  expect(exp.evaluate({})).toBe(1797259609 ^ 2579123966); // x0 ^ x1
 });
