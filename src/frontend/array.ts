@@ -21,7 +21,7 @@ import {
   recursiveFlatten,
   rep,
 } from "../utils";
-import { checkConvShape } from "./convolution";
+import { checkConvShape, prepareConv } from "./convolution";
 import {
   CompareOp,
   getAval,
@@ -435,10 +435,7 @@ export class Array extends Tracer {
     const newShape = [...arrays[0].shape];
 
     // Short circuit if all are already AluExp.
-    if (
-      arrays.every((ar) => ar.#source instanceof AluExp) &&
-      reduceAxis === undefined
-    ) {
+    if (arrays.every((ar) => ar.#source instanceof AluExp) && !reduceAxis) {
       if (arrays.every((ar) => deepEqual(ar.#st, arrays[0].#st))) {
         // All are AluExp and have the same shape tracker.
         const exp = custom(arrays.map((ar) => ar.#source as AluExp));
@@ -800,8 +797,22 @@ export class Array extends Tracer {
         ];
       },
       [Primitive.Conv]([x, y], params) {
-        checkConvShape(x.shape, y.shape, params);
-        throw new Error("XXX Conv operation is not implemented yet");
+        const outShape = checkConvShape(x.shape, y.shape, params);
+        const [stX, stY] = prepareConv(x.#st, y.#st, params);
+        // Sanity check that the output shape is correct.
+        if (!deepEqual(stX.shape.slice(2, -1), outShape.slice(2))) {
+          throw new Error(
+            `Conv stX ${stX.shape} does not match expected output shape ${outShape}`,
+          );
+        }
+        return [
+          Array.#naryCustom(
+            "conv",
+            ([x, y]: AluExp[]) => AluExp.mul(x, y),
+            [x.#reshape(stX), y.#reshape(stY)],
+            { reduceAxis: true },
+          ),
+        ];
       },
       [Primitive.Compare]([x, y], { op }) {
         const custom = ([x, y]: AluExp[]) => aluCompare(x, y, op);

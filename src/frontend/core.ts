@@ -183,7 +183,7 @@ export function dot(x: TracerValue, y: TracerValue) {
   return bind1(Primitive.Dot, [x, y]);
 }
 
-export function conv(x: Tracer, y: Tracer, params: Partial<ConvParams>) {
+export function conv(x: Tracer, y: Tracer, params: Partial<ConvParams> = {}) {
   if (x.ndim !== y.ndim) {
     throw new Error(
       `conv() requires inputs with the same number of dimensions, got ${x.ndim} and ${y.ndim}`,
@@ -191,7 +191,7 @@ export function conv(x: Tracer, y: Tracer, params: Partial<ConvParams>) {
   }
   const n = x.ndim - 2;
   if (n < 0) throw new Error("conv() requires at least 2D inputs");
-  // conv shape check is delayed until interpretation, to avoid circular imports.
+  // conv shape check is delayed until interpretation.
   return bind1(Primitive.Conv, [x, y], {
     strides: params.strides ?? rep(n, 1),
     padding: params.padding ?? rep(n, [0, 0]),

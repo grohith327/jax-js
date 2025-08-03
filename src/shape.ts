@@ -20,9 +20,17 @@
  */
 
 import { AluExp } from "./alu";
-import { deepEqual, intdiv, isPermutation, prod, rep, zip } from "./utils";
+import {
+  deepEqual,
+  intdiv,
+  isPermutation,
+  prod,
+  range,
+  rep,
+  zip,
+} from "./utils";
 
-type Pair = [number, number];
+export type Pair = [number, number];
 
 const jstr = JSON.stringify;
 
@@ -718,6 +726,43 @@ export class ShapeTracker {
     }
     // Then, expand the data to the new shape.
     return st.expand(newShape);
+  }
+
+  /**
+   * Repeat data in each axis by a positive number of repetitions.
+   *
+   * - If `tile` is true (default): [1, 2, 3] -> [1, 2, 3, 1, 2, 3].
+   * - If `tile` is false: [1, 2, 3] -> [1, 1, 2, 2, 3, 3].
+   */
+  repeat(reps: number[], tile: boolean = true): ShapeTracker {
+    if (reps.length > this.shape.length) {
+      throw new Error(
+        `Too many repeats ${jstr(reps)} for shape ${jstr(this.shape)}`,
+      );
+    }
+    if (reps.some((c) => c <= 0))
+      throw new Error(`Invalid repeats ${jstr(reps)}`);
+    if (reps.length === 0) return this;
+
+    // First, duplicate the dimensions in the shape.
+    const noop = this.shape.slice(0, -reps.length);
+    const shape = this.shape.slice(-reps.length);
+
+    return this.broadcast(
+      [
+        ...noop,
+        ...shape.flatMap((s, i) => (tile ? [reps[i], s] : [s, reps[i]])),
+      ],
+      shape.map((_, i) => noop.length + 2 * i + (tile ? 0 : 1)),
+    ).reshape([...noop, ...shape.map((s, i) => s * reps[i])]);
+  }
+
+  /** Move axis i to axis j. */
+  moveaxis(i: number, j: number): ShapeTracker {
+    const perm = range(this.shape.length);
+    perm.splice(i, 1); // remove i
+    perm.splice(j, 0, i); // insert i at j
+    return this.permute(perm);
   }
 }
 

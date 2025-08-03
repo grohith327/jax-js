@@ -16,6 +16,13 @@ export function zip<T, U>(xs: T[], ys: U[]): [T, U][] {
   return xs.map((x, i) => [x, ys[i]]);
 }
 
+export function zipn<T>(...arrays: T[][]): T[][] {
+  const minLength = Math.min(...arrays.map((x) => x.length));
+  return Array.from({ length: minLength }, (_, i) =>
+    arrays.map((arr) => arr[i]),
+  );
+}
+
 export function rep<T>(
   length: number,
   value: T,

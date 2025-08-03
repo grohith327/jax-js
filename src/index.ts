@@ -3,6 +3,7 @@ import * as jaxprModule from "./frontend/jaxpr";
 import * as jvpModule from "./frontend/jvp";
 import * as linearizeModule from "./frontend/linearize";
 import * as vmapModule from "./frontend/vmap";
+import * as lax from "./lax";
 import * as nn from "./nn";
 import * as numpy from "./numpy";
 import { Array, ArrayLike, DType } from "./numpy";
@@ -19,6 +20,7 @@ export {
   DType,
   type JsTree,
   type JsTreeDef,
+  lax,
   nn,
   numpy,
   random,

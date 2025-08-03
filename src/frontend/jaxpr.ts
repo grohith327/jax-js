@@ -16,7 +16,7 @@ import {
   zip,
 } from "../utils";
 import { Array, generalBroadcast, pureArray, scalar } from "./array";
-import { checkConvShape, convShapeOut } from "./convolution";
+import { checkConvShape } from "./convolution";
 import {
   bind,
   flattenFun,
@@ -756,8 +756,7 @@ export const abstractEvalRules: { [P in Primitive]: AbstractEvalRule<P> } = {
       throw new TypeError(
         `Conv dtype mismatch, got ${lhs.dtype} vs ${rhs.dtype}`,
       );
-    checkConvShape(lhs.shape, rhs.shape, params);
-    const shape = convShapeOut(lhs.shape, rhs.shape, params);
+    const shape = checkConvShape(lhs.shape, rhs.shape, params);
     return [new ShapedArray(shape, lhs.dtype)];
   },
   [Primitive.Compare]: compareAbstractEval,
