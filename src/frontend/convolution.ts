@@ -31,7 +31,7 @@ Backprop of activations:
 - kernel -> flip(kernel)
 
 Backprop of filter:
-  y = conv(x, filter) -> filter’ = conv1x1(x, y’), where
+  y = conv(x, filter) -> filter’ = conv(x, y’), where
 
 - in_channels & out_channels are transposed with batch size
 - stride <-> rhs_dilation
@@ -109,6 +109,7 @@ export function pool(
   strides: number | number[] = 1,
   dilation: number | number[] = 1,
 ): ShapeTracker {
+  if (ks.length === 0) return st; // Dimension 0 kernel, no pooling needed.
   if (st.shape.length < ks.length)
     throw new Error("pool() called with too many dimensions");
   if (typeof strides === "number") strides = rep(ks.length, strides);

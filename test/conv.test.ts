@@ -57,4 +57,22 @@ suite.each(devices)("device:%s", (device) => {
     const result = convFn(x, y);
     expect(result.js()).toEqual([[[-1.5, 0, 1.5, 3, 10.5]]]);
   });
+
+  test("0d convolution", () => {
+    const x = np.array([
+      [1, 2],
+      [3, 4],
+      [5, 8],
+    ]);
+    const y = np.array([
+      [6, 4],
+      [3, 2],
+    ]);
+    const result = lax.convGeneralDilated(x, y, [], "VALID");
+    expect(result.js()).toEqual([
+      [14, 7],
+      [34, 17],
+      [62, 31],
+    ]);
+  });
 });
