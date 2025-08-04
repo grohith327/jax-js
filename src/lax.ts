@@ -64,6 +64,8 @@ export function convGeneralDilated(
     rhsDilation?: number[];
   } = {},
 ): Array {
+  if (lhs.ndim < 2) throw new Error("lhs must have at least 2 dimensions");
+  if (rhs.ndim < 2) throw new Error("rhs must have at least 2 dimensions");
   if (typeof padding === "string") {
     if (lhsDilation?.some((d) => d !== 1)) {
       throw new Error(
