@@ -176,11 +176,12 @@
     logLearningRate = Math.log10(learningRate);
   });
 
-  let Model: ModelType = undefined!; // Initialized in $effect below.
+  let Model: ModelType = undefined!; // Initialized below.
   let batchSize: number = undefined!;
 
   let selectedModel = $state("MLP");
-  $effect(() => changeModelType(selectedModel));
+  // svelte-ignore state_referenced_locally
+  changeModelType(selectedModel);
 
   function changeModelType(modelType: string) {
     if (running) return;
