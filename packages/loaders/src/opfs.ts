@@ -1,5 +1,5 @@
 /** FileInfo object containing metadata about cached files. */
-export interface FileInfo {
+export interface OPFSFileInfo {
   name: string;
   lastModified: Date;
   size: number;
@@ -13,36 +13,12 @@ function isOPFSSupported(): boolean {
   );
 }
 
-function fileToInfo(name: string, file: File): FileInfo {
+function fileToInfo(name: string, file: File): OPFSFileInfo {
   return {
     name,
     lastModified: new Date(file.lastModified),
     size: file.size,
   };
-}
-
-/** Escape problematic characters in keys for safe file system usage. */
-function escapeKey(name: string): string {
-  // Use hex encoding (case-insensitive, filesystem-safe)
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(name);
-  const hex = Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  return `blob-${hex}`;
-}
-
-function unescapeKey(key: string): string {
-  try {
-    if (!key.startsWith("blob-")) return key;
-    const hex = key.slice(5); // Remove "blob-" prefix
-    const bytes = new Uint8Array(
-      hex.match(/.{2}/g)?.map((h) => parseInt(h, 16)) ?? [],
-    );
-    return new TextDecoder().decode(bytes);
-  } catch {
-    return key;
-  }
 }
 
 export class OPFS {
@@ -59,10 +35,34 @@ export class OPFS {
     return this.#root;
   }
 
+  /** Escape problematic characters in keys for safe file system usage. */
+  static #escapeKey(name: string): string {
+    // Use hex encoding (case-insensitive, filesystem-safe)
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(name);
+    const hex = Array.from(bytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    return `blob-${hex}`;
+  }
+
+  static #unescapeKey(key: string): string {
+    try {
+      if (!key.startsWith("blob-")) return key;
+      const hex = key.slice(5); // Remove "blob-" prefix
+      const bytes = new Uint8Array(
+        hex.match(/.{2}/g)?.map((h) => parseInt(h, 16)) ?? [],
+      );
+      return new TextDecoder().decode(bytes);
+    } catch {
+      return key;
+    }
+  }
+
   /** Write data to OPFS with the given key. */
   async write(name: string, data: Uint8Array): Promise<void> {
     const root = await this.#getRoot();
-    const key = escapeKey(name);
+    const key = OPFS.#escapeKey(name);
     const fileHandle = await root.getFileHandle(key, { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(data);
@@ -71,7 +71,7 @@ export class OPFS {
 
   async #getFile(name: string): Promise<File | null> {
     const root = await this.#getRoot();
-    const key = escapeKey(name);
+    const key = OPFS.#escapeKey(name);
     try {
       const fileHandle = await root.getFileHandle(key);
       return await fileHandle.getFile();
@@ -91,20 +91,20 @@ export class OPFS {
   }
 
   /** Get file information for the given key. */
-  async info(name: string): Promise<FileInfo | null> {
+  async info(name: string): Promise<OPFSFileInfo | null> {
     const file = await this.#getFile(name);
     if (!file) return null;
     return fileToInfo(name, file);
   }
 
   /** List all files in OPFS. */
-  async list(): Promise<FileInfo[]> {
+  async list(): Promise<OPFSFileInfo[]> {
     const root = await this.#getRoot();
-    const files: FileInfo[] = [];
+    const files: OPFSFileInfo[] = [];
 
     for await (const [key, handle] of root.entries()) {
       if (handle.kind === "file") {
-        const name = unescapeKey(key);
+        const name = OPFS.#unescapeKey(key);
         try {
           const file = await (handle as FileSystemFileHandle).getFile();
           files.push(fileToInfo(name, file));
@@ -121,12 +121,12 @@ export class OPFS {
   }
 
   /** Remove a file from OPFS and return its info if it existed. */
-  async remove(name: string): Promise<FileInfo | null> {
+  async remove(name: string): Promise<OPFSFileInfo | null> {
     const root = await this.#getRoot();
     const file = await this.#getFile(name);
     if (!file) return null;
     const info = fileToInfo(name, file);
-    const key = escapeKey(name);
+    const key = OPFS.#escapeKey(name);
     try {
       await root.removeEntry(key);
     } catch (error) {
