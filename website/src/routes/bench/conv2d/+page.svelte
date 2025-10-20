@@ -293,7 +293,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
           shape: [outChannels, channels, filterHeight, filterWidth],
         })
         .astype(this.fp16 ? np.float16 : np.float32);
-      await Promise.all([input.ref.wait(), filter.ref.wait()]);
+      await Promise.all([input.wait(), filter.wait()]);
 
       const start = performance.now();
       const output = jax.lax.convGeneralDilated(

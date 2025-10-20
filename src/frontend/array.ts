@@ -635,10 +635,19 @@ export class Array extends Tracer {
     return dtypedArray(this.dtype, buf);
   }
 
-  /** Wait for this array to be placed on the backend, if needed. */
-  async wait(): Promise<void> {
+  /**
+   * Wait for this array to finish evaluation.
+   *
+   * Operations and data loading in jax-js are lazy, so this function ensures
+   * that pending operations are dispatched and fully executed before it
+   * returns.
+   *
+   * If you are mapping from `data()` or `dataSync()`, it will also trigger
+   * dispatch of operations as well.
+   */
+  async wait(): Promise<Array> {
     this.#check();
-    if (this.#source instanceof AluExp) return;
+    if (this.#source instanceof AluExp) return this;
     const pending = this.#pending;
     if (pending) {
       // Compile all pending executables concurrently.
@@ -646,7 +655,7 @@ export class Array extends Tracer {
       for (const p of pending) p.submit();
     }
     await this.#backend.read(this.#source, 0, 0);
-    this.dispose();
+    return this;
   }
 
   /**

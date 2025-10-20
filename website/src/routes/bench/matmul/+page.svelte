@@ -718,7 +718,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
       const b = np
         .array(randomBuffer, { shape: [n, n] })
         .astype(this.fp16 ? np.float16 : np.float32);
-      await Promise.all([a.ref.wait(), b.ref.wait()]); // Make sure tensors are ready.
+      await Promise.all([a.wait(), b.wait()]); // Make sure tensors are ready.
 
       performance.mark("jax-start");
       const start = performance.now();

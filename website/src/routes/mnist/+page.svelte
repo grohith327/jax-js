@@ -223,7 +223,7 @@
     testMetrics = [];
 
     let params = Model.init(random.key(0));
-    await Promise.all(tree.leaves(params).map((ar) => ar.ref.wait()));
+    await Promise.all(tree.leaves(params).map((ar) => ar.wait()));
 
     const loss = lossFn(Model.predict);
 
@@ -263,9 +263,8 @@
           );
           [updates, optState] = solver.update(lossGrad, optState);
           params = applyUpdates(params, updates);
-          for (const val of Object.values(params)) {
-            await val.ref.wait();
-          }
+
+          await Promise.all(Object.values(params).map((val) => val.wait()));
           const duration = performance.now() - startTime;
           const lossNumber = (await lossVal.jsAsync()) as number;
           log(
