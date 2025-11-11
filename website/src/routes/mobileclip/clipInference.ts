@@ -65,18 +65,16 @@ export function runMobileCLIPTextEncoder(
   textTokens: np.Array,
 ): np.Array {
   // Embed tokens and add positional embeddings
-  let x = tokenEmbedding.slice(textTokens.ref); // [B, L, D]
+  let x = tokenEmbedding.slice(textTokens.ref); // [L, D]
   x = x.add(positionalEmbedding);
 
   for (const block of transformer) {
-    console.log("Running block", x.shape);
     x = runMobileCLIPTextBlock(block, x);
   }
   x = runLayerNorm(lnFinal, x.ref);
 
   const finalFeatures = x.slice(np.argmax(textTokens, -1));
-  console.log("final matmul", finalFeatures.shape);
-  return np.matmul(finalFeatures, textProjection); // [B, D_out]
+  return np.dot(textProjection.transpose(), finalFeatures); // [D_out]
 }
 
 export type MobileCLIPTextBlock = {
@@ -127,27 +125,22 @@ export function runMultiHeadAttention(
   // Split into Q, K, V by slicing along the last dimension
   const q_ = qkv.ref.slice([], [0, embed]);
   const k_ = qkv.ref.slice([], [embed, 2 * embed]);
-  const v_ = qkv.ref.slice([], [2 * embed, 3 * embed]);
+  const v_ = qkv.slice([], [2 * embed, 3 * embed]);
 
-  // Reshape for multi-head attention: [seqLen, numHeads, headDim]
-  const q = q_.reshape([seqLen, numHeads, headDim]);
-  const k = k_.reshape([seqLen, numHeads, headDim]);
-  const v = v_.reshape([seqLen, numHeads, headDim]);
-
-  // Transpose for attention: [numHeads, seqLen, headDim]
-  const qT = q.transpose([1, 0, 2]);
-  const kT = k.transpose([1, 0, 2]);
-  const vT = v.transpose([1, 0, 2]);
+  // Reshape for multi-head attention: [numHeads, seqLen, headDim]
+  const q = q_.reshape([seqLen, numHeads, headDim]).transpose([1, 0, 2]);
+  const k = k_.reshape([seqLen, numHeads, headDim]).transpose([1, 0, 2]);
+  const v = v_.reshape([seqLen, numHeads, headDim]).transpose([1, 0, 2]);
 
   // Compute attention scores: Q @ K^T / sqrt(headDim)
-  const scores = np.matmul(qT, kT.transpose([0, 2, 1])); // [numHeads, seqLen, seqLen]
+  const scores = np.matmul(q, k.transpose([0, 2, 1])); // [numHeads, seqLen, seqLen]
   const scaledScores = scores.mul(1 / Math.sqrt(headDim));
 
   // Apply softmax
   const attnWeights = nn.softmax(scaledScores, -1);
 
   // Apply attention to values
-  const attnOutput = np.matmul(attnWeights, vT); // [numHeads, seqLen, headDim]
+  const attnOutput = np.matmul(attnWeights, v); // [numHeads, seqLen, headDim]
 
   // Transpose back and reshape: [seqLen, numHeads, headDim] -> [seqLen, embed]
   const output = attnOutput.transpose([1, 0, 2]).reshape([seqLen, embed]);
