@@ -67,10 +67,9 @@ pnpm test
 
 - Finish CLIP inference demo and associated features (depthwise convolution, vmap of gather, etc.)
 - Fix jit-of-grad returning very incorrect result
-- Probably add static_argnums to jit() so that clip and some nn functions have jit added
 - Improve perf of MNIST neural network
   - Optimize conv2d further (maybe blocks -> local dims?)
-  - Add fused reductions to JIT
+  - Add fused epilogue to JIT
   - Reduce kernel overhead of constants / inline expressions
 - Investigate why jax-js Matmul is 2x slower on Safari TP than unroll kernel
 - How many threads to create per workgroup, depends on hardware
