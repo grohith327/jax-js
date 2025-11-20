@@ -540,15 +540,21 @@
                   ]}
                 >
                   {#if line.level === "log"}
-                    <ChevronRightIcon size={18} class="text-gray-300" />
+                    <ChevronRightIcon
+                      size={18}
+                      class="shrink-0 text-gray-300"
+                    />
                   {:else if line.level === "info"}
-                    <InfoIcon size={18} class="text-blue-500" />
+                    <InfoIcon size={18} class="shrink-0 text-blue-500" />
                   {:else if line.level === "warn"}
-                    <AlertTriangleIcon size={18} class="text-yellow-500" />
+                    <AlertTriangleIcon
+                      size={18}
+                      class="shrink-0 text-yellow-500"
+                    />
                   {:else if line.level === "error"}
-                    <XIcon size={18} class="text-red-500" />
+                    <XIcon size={18} class="shrink-0 text-red-500" />
                   {:else if line.level === "image"}
-                    <ImageIcon size={18} class="text-gray-400" />
+                    <ImageIcon size={18} class="shrink-0 text-gray-400" />
                   {/if}
                   <p class="font-mono whitespace-pre-wrap">
                     {#if line.level === "image"}
