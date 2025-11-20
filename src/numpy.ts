@@ -8,6 +8,7 @@ import {
   fudgeArray,
   full,
   fullLike as fullLikeUnfudged,
+  generalBroadcast,
   identity,
   linspace,
   ones,
@@ -542,6 +543,35 @@ export function tile(a: ArrayLike, reps: number | number[]): Array {
   return core
     .broadcast(a, broadcastedShape, broadcastAxes)
     .reshape(finalShape) as Array;
+}
+
+/**
+ * Broadcast an array to a shape, with NumPy-style broadcasing rules.
+ *
+ * In other words, this lets you append axes to the left, and/or expand
+ * dimensions where the shape is 1.
+ */
+export function broadcastTo(a: ArrayLike, shape: number[]) {
+  const nd = ndim(a);
+  if (shape.length < nd) {
+    throw new Error(
+      `broadcastTo: target shape ${JSON.stringify(shape)} has fewer dimensions than input array: ${nd}`,
+    );
+  }
+  return core.broadcast(a, shape, range(shape.length - nd)) as Array;
+}
+
+/** Broadcast input shapes to a common output shape. */
+export function broadcastShapes(...shapes: number[][]): number[] {
+  if (shapes.length === 0) return [];
+  return shapes.reduce(generalBroadcast);
+}
+
+/** Broadcast arrays to a common shape. */
+export function broadcastArrays(...arrays: ArrayLike[]): Array[] {
+  const shapes = arrays.map((a) => shape(a));
+  const outShape = broadcastShapes(...shapes);
+  return arrays.map((a) => broadcastTo(a, outShape));
 }
 
 /**
