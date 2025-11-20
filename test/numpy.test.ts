@@ -719,6 +719,34 @@ suite.each(devices)("device:%s", (device) => {
     });
   });
 
+  suite("jax.numpy.cbrt()", () => {
+    test("computes element-wise cube root", () => {
+      const x = np.array([-8, -1, 0, 1, 8]);
+      const y = np.cbrt(x);
+      expect(y).toBeAllclose([-2, -1, 0, 1, 2]);
+    });
+
+    test("works with jvp", () => {
+      const x = np.array([-8, -1, 0, 1, 8]);
+      const [y, dy] = jvp(np.cbrt, [x], [np.ones([5])]);
+      expect(y).toBeAllclose([-2, -1, 0, 1, 2]);
+      expect(dy).toBeAllclose([1 / 12, 1 / 3, Infinity, 1 / 3, 1 / 12]);
+    });
+  });
+
+  suite("jax.numpy.power()", () => {
+    test("computes element-wise power", () => {
+      const x = np.array([-1, 2, 3, 4]);
+      const y = np.power(x, 3);
+      expect(y).toBeAllclose([NaN, 8, 27, 64]);
+    });
+
+    test("multiple different exponents", () => {
+      const y = np.power(3, np.array([-2, 0, 0.5, 1, 2]));
+      expect(y).toBeAllclose([1 / 9, 1, Math.sqrt(3), 3, 9]);
+    });
+  });
+
   suite("jax.numpy.min()", () => {
     test("computes minimum of 1D array", () => {
       const x = np.array([3, 1, 4, 2]);

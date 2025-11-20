@@ -838,6 +838,22 @@ export function log10(x: ArrayLike): Array {
   return log(x).mul(Math.LOG10E);
 }
 
+/** Computes first array raised to power of second array, element-wise. */
+export function power(x1: ArrayLike, x2: ArrayLike): Array {
+  return exp(log(x1).mul(x2));
+}
+
+/** Alias of `jax.numpy.power()`. */
+export const pow = power;
+
+/** Calculate the element-wise cube root of the input array. */
+export function cbrt(x: ArrayLike): Array {
+  x = fudgeArray(x);
+  // This isn't just power(x, 1/3) since we need to handle negative numbers.
+  const sgn = where(less(x.ref, 0), -1, 1);
+  return sgn.ref.mul(exp(log(x.mul(sgn)).mul(1 / 3)));
+}
+
 /**
  * Calculate element-wise hyperbolic sine of input.
  *
