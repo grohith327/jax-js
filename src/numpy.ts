@@ -30,7 +30,6 @@ export {
   eye,
   identity,
   linspace,
-  scalar,
   zeros,
   ones,
   full,

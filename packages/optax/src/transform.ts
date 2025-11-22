@@ -14,7 +14,7 @@ import {
 } from "./treeUtils";
 
 function u32(x: number): np.Array {
-  return np.scalar(x, { dtype: np.uint32 });
+  return np.array(x, { dtype: np.uint32 });
 }
 
 export type ScaleByAdamOptions = {

@@ -178,6 +178,6 @@ export function runLayerNorm(
         .mul(1 / dimSize)
         .sum(-1, { keepDims: true }),
     )
-    .add(np.scalar(1e-5, { dtype: x.dtype, device: x.device }));
+    .add(np.array(1e-5, { dtype: x.dtype, device: x.device }));
   return x.div(denom).mul(weight).add(bias);
 }
