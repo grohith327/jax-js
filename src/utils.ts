@@ -244,6 +244,8 @@ export interface FpHashable {
   hash(state: FpHash): void;
 }
 
+const _stagingbuf = new DataView(new ArrayBuffer(4));
+
 /**
  * Polynomial hashes modulo p are good at avoiding collisions in expectation.
  * Probability-wise, it's good enough to be used for something like
@@ -280,8 +282,8 @@ export class FpHash {
         if (Number.isInteger(x)) {
           this.#update(68265653n ^ BigInt(x));
         } else {
-          const ar = new Float64Array([x]);
-          this.#update(new DataView(ar.buffer).getBigUint64(0, true));
+          _stagingbuf.setFloat64(0, x, true);
+          this.#update(_stagingbuf.getBigUint64(0, true));
         }
       } else if (typeof x === "boolean") {
         this.#update(x ? 69069841n : 63640693n);
@@ -293,7 +295,7 @@ export class FpHash {
         this.#update(37832657n);
       } else if (x === undefined) {
         this.#update(18145117n);
-      } else if (typeof x === "object" && "hash" in x) {
+      } else {
         // If the object has a hash method, call it.
         x.hash(this);
       }

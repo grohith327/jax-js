@@ -817,11 +817,14 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
         await session.run({ A: tensorA, B: tensorB });
 
         // Actual benchmark run
+        performance.mark("onnx-start");
         const start = performance.now();
         const results = await session.run({ A: tensorA, B: tensorB });
         const outputData = results.C.data as Float32Array | Float16Array;
         printBufferItems(outputData);
         const time = performance.now() - start;
+        performance.mark("onnx-end");
+        performance.measure("onnx", "onnx-start", "onnx-end");
 
         return time / 1000; // seconds
       } catch (error) {
