@@ -696,6 +696,146 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     }
   }
 
+  class OnnxStrategy extends Strategy {
+    name: string;
+    dtype: "fp16" | "fp32";
+
+    constructor(dtype: "fp16" | "fp32") {
+      super();
+      this.name = `onnx-${dtype}`;
+      this.dtype = dtype;
+    }
+
+    // Helper function to create a simple ONNX model with just a MatMul operation
+    async createMatMulModel(dim: number): Promise<Uint8Array> {
+      const { onnx } = await import("onnx-proto");
+
+      const elemType = {
+        fp32: onnx.TensorProto.DataType.FLOAT,
+        fp16: onnx.TensorProto.DataType.FLOAT16,
+      }[this.dtype];
+
+      // Create input tensors
+      const input1 = onnx.ValueInfoProto.create({
+        name: "A",
+        type: onnx.TypeProto.create({
+          tensorType: onnx.TypeProto.Tensor.create({
+            elemType,
+            shape: onnx.TensorShapeProto.create({
+              dim: [
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+              ],
+            }),
+          }),
+        }),
+      });
+
+      const input2 = onnx.ValueInfoProto.create({
+        name: "B",
+        type: onnx.TypeProto.create({
+          tensorType: onnx.TypeProto.Tensor.create({
+            elemType,
+            shape: onnx.TensorShapeProto.create({
+              dim: [
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+              ],
+            }),
+          }),
+        }),
+      });
+
+      // Create output tensor
+      const output = onnx.ValueInfoProto.create({
+        name: "C",
+        type: onnx.TypeProto.create({
+          tensorType: onnx.TypeProto.Tensor.create({
+            elemType,
+            shape: onnx.TensorShapeProto.create({
+              dim: [
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+                onnx.TensorShapeProto.Dimension.create({ dimValue: dim }),
+              ],
+            }),
+          }),
+        }),
+      });
+
+      // Create MatMul node
+      const matmulNode = onnx.NodeProto.create({
+        input: ["A", "B"],
+        output: ["C"],
+        opType: "MatMul",
+        name: "matmul_node",
+      });
+
+      // Create the graph
+      const graph = onnx.GraphProto.create({
+        node: [matmulNode],
+        name: "matmul_graph",
+        input: [input1, input2],
+        output: [output],
+      });
+
+      // Create the model
+      const model = onnx.ModelProto.create({
+        irVersion: 8,
+        opsetImport: [onnx.OperatorSetIdProto.create({ version: 14 })],
+        graph: graph,
+      });
+
+      // Serialize to bytes
+      return onnx.ModelProto.encode(model).finish();
+    }
+
+    async run(): Promise<number> {
+      const ort = await import("onnxruntime-web/webgpu");
+      let session: import("onnxruntime-web/webgpu").InferenceSession | null =
+        null;
+
+      try {
+        const model = await this.createMatMulModel(n);
+        session = await ort.InferenceSession.create(model, {
+          executionProviders: ["webgpu"],
+        });
+
+        // Prepare input tensors
+        let buffer: any;
+        let ortType: any;
+        if (this.dtype === "fp16") {
+          buffer = new Float16Array(randomBuffer);
+          ortType = "float16";
+        } else {
+          buffer = randomBuffer;
+          ortType = "float32";
+        }
+        const tensorA = new ort.Tensor(ortType, buffer, [n, n]);
+        const tensorB = new ort.Tensor(ortType, buffer, [n, n]);
+
+        // Warm-up run to ensure everything is loaded
+        await session.run({ A: tensorA, B: tensorB });
+
+        // Actual benchmark run
+        const start = performance.now();
+        const results = await session.run({ A: tensorA, B: tensorB });
+        const outputData = results.C.data as Float32Array | Float16Array;
+        printBufferItems(outputData);
+        const time = performance.now() - start;
+
+        return time / 1000; // seconds
+      } catch (error) {
+        console.error("ONNX Runtime error:", error);
+        return -1;
+      } finally {
+        // Clean up session resources
+        if (session) {
+          session.release();
+        }
+      }
+    }
+  }
+
   class JaxJsStrategy extends Strategy {
     name: string;
     fp16: boolean;
@@ -748,6 +888,8 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     new Unroll4x4Strategy(8, 8),
     new Unroll4x4Strategy(8, 16),
     new Unroll4x4Strategy(16, 16),
+    new OnnxStrategy("fp16"),
+    new OnnxStrategy("fp32"),
     new TfjsStrategy(),
     new JaxJsStrategy(),
     new JaxJsStrategy(true),

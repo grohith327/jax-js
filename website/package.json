@@ -51,6 +51,8 @@
     "js-base64": "^3.7.8",
     "lucide-svelte": "^0.475.0",
     "monaco-editor": "^0.52.2",
+    "onnx-proto": "^8.0.1",
+    "onnxruntime-web": "^1.23.2",
     "p-throttle": "^7.0.0",
     "svelte": "^5.20.2"
   }

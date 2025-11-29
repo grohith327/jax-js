@@ -11,6 +11,6 @@ export default defineConfig({
   ],
   optimizeDeps: {
     // https://github.com/vitejs/vite/issues/14609
-    exclude: ["@rollup/browser"],
+    exclude: ["@rollup/browser", "onnxruntime-web"],
   },
 });
