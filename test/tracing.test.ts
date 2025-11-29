@@ -288,8 +288,8 @@ suite("jax.jit()", () => {
 
     expect(grad(f)(3)).toBeAllclose(6);
     expect(grad(f)(10)).toBeAllclose(20);
-    // TODO: Figure out why grad-grad-jit doesn't work. UseAfterFreeError :(
-    // expect(grad(grad(f))(10)).toBeAllclose(2);
+    expect(jvp(grad(f), [10], [1])).toBeAllclose([20, 2]);
+    expect(grad(grad(f))(10)).toBeAllclose(2);
     expect(grad(jit(grad(f)))(10)).toBeAllclose(2);
   });
 

@@ -364,9 +364,14 @@ class PartialEvalTrace extends Trace {
       avalsOut: jaxpr2.outs.map((x) => x.aval),
       tracerRefsOut: [], // populated later
     };
-    const outs2 = jaxpr2.outs.map(
-      (x) => new PartialEvalTracer(this, PartialVal.unknown(x.aval), recipe),
-    );
+    const outs2 = jaxpr2.outs.map((x, i) => {
+      if (i > 0) {
+        // Make sure we increment reference count for each tracer in the recipe,
+        // since they belong to multiple PartialEvalTracers.
+        recipe.tracersIn.forEach((t) => t.ref);
+      }
+      return new PartialEvalTracer(this, PartialVal.unknown(x.aval), recipe);
+    });
     recipe.tracerRefsOut = outs2.map((t) => new WeakRef(t));
 
     // Stitch the known and unknown output tracers together, both with JitCall.

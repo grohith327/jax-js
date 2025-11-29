@@ -106,7 +106,7 @@ pnpm -C website dev
 - [x] We figure out the `dispose()` / refcount / linear types stuff
   - [x] `dispose()` for saved "const" tracers in Jaxprs
   - [x] Garbage collection for JIT programs
-  - [ ] Debug grad-grad-jit test producing a UseAfterFreeError
+  - [x] Debug grad-grad-jit test producing a UseAfterFreeError
 - [ ] Demos: Navier-Stokes, neural networks, statistics
 - [x] Features for neural networks
   - [x] Convolution
