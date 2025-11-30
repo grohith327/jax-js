@@ -192,8 +192,13 @@ export function reduce(
     axis = axis.map((a) => checkAxis(a, ndim(x)));
   }
   const originalShape = getShape(x);
-  const result = bind1(Primitive.Reduce, [x], { op, axis });
-  return opts?.keepdims ? broadcast(result, originalShape, axis) : result;
+  let result = bind1(Primitive.Reduce, [x], { op, axis });
+  if (opts?.keepdims) {
+    result = result.reshape(
+      originalShape.map((dim, i) => (axis.includes(i) ? 1 : dim)),
+    );
+  }
+  return result;
 }
 
 export function dot(x: TracerValue, y: TracerValue) {
@@ -556,12 +561,8 @@ export abstract class Tracer {
     } else {
       axis = axis.map((a) => checkAxis(a, this.ndim));
     }
-    let result = reduce(this, AluOp.Add, axis);
-    result = result.mul(result.size / this.size);
-    if (opts?.keepdims) {
-      result = broadcast(result, this.shape, axis);
-    }
-    return result as this;
+    const result = reduce(this, AluOp.Add, axis, opts);
+    return result.mul(result.size / this.size) as this;
   }
 
   /** Permute the dimensions of an array. Defaults to reversing the axis order. */

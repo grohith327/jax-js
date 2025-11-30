@@ -17,6 +17,21 @@ suite.each(devices)("device:%s", (device) => {
     defaultDevice(device);
   });
 
+  suite("jax.numpy.sum()", () => {
+    test("can take multiple axes", () => {
+      const x = np.arange(24).reshape([2, 3, 4]);
+      const y = x.sum([0, 2]);
+      expect(y.js()).toEqual([60, 92, 124]);
+    });
+
+    test("keepdims preserves dim of size 1", () => {
+      const x = np.arange(24).reshape([2, 3, 4]);
+      const y = x.sum([0, 2], { keepdims: true });
+      expect(y.shape).toEqual([1, 3, 1]);
+      expect(y.js()).toEqual([[[60], [92], [124]]]);
+    });
+  });
+
   suite("jax.numpy.eye()", () => {
     test("computes a square matrix", () => {
       const x = np.eye(3);
