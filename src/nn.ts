@@ -225,9 +225,9 @@ export function softmax(x: ArrayLike, axis?: number | number[]): Array {
     return ones(x.shape); // scalar case, return ones
   }
 
-  const xMax = max(x.ref, axis, { keepDims: true });
+  const xMax = max(x.ref, axis, { keepdims: true });
   const unnormalized = exp(x.sub(stopGradient(xMax)));
-  return unnormalized.ref.div(unnormalized.sum(axis, { keepDims: true }));
+  return unnormalized.ref.div(unnormalized.sum(axis, { keepdims: true }));
 }
 
 /**
@@ -251,9 +251,9 @@ export function logSoftmax(x: ArrayLike, axis?: number | number[]): Array {
     return zeros(x.shape); // scalar case, return log(1)
   }
 
-  const xMax = max(x.ref, axis, { keepDims: true }); // keep dims
+  const xMax = max(x.ref, axis, { keepdims: true }); // keep dims
   const shifted = x.sub(stopGradient(xMax));
-  const shiftedLogsumexp = log(exp(shifted.ref).sum(axis, { keepDims: true }));
+  const shiftedLogsumexp = log(exp(shifted.ref).sum(axis, { keepdims: true }));
   return shifted.sub(shiftedLogsumexp);
 }
 

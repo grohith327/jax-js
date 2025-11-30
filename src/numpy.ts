@@ -264,7 +264,7 @@ export function argmin(
     axis = checkAxis(axis, a.ndim);
   }
   const shape = a.shape;
-  const isMax = equal(a, min(a.ref, axis, { keepDims: true }));
+  const isMax = equal(a, min(a.ref, axis, { keepdims: true }));
   const length = scalar(shape[axis], { dtype: int32, device: a.device });
   const idx = isMax.astype(DType.Int32).mul(
     // Index by length-i instead of i, so we can take the max and get the first i.
@@ -295,7 +295,7 @@ export function argmax(
     axis = checkAxis(axis, a.ndim);
   }
   const shape = a.shape;
-  const isMax = equal(a, max(a.ref, axis, { keepDims: true }));
+  const isMax = equal(a, max(a.ref, axis, { keepdims: true }));
   const length = scalar(shape[axis], { dtype: int32, device: a.device });
   const idx = isMax.astype(DType.Int32).mul(
     // Index by length-i instead of i, so we can take the max and get the first i.

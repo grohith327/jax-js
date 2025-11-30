@@ -172,7 +172,7 @@ export function max(x: TracerValue, y: TracerValue) {
 }
 
 /** @inline */
-export type ReduceOpts = { keepDims?: boolean };
+export type ReduceOpts = { keepdims?: boolean };
 
 export function reduce(
   x: TracerValue,
@@ -193,7 +193,7 @@ export function reduce(
   }
   const originalShape = getShape(x);
   const result = bind1(Primitive.Reduce, [x], { op, axis });
-  return opts?.keepDims ? broadcast(result, originalShape, axis) : result;
+  return opts?.keepdims ? broadcast(result, originalShape, axis) : result;
 }
 
 export function dot(x: TracerValue, y: TracerValue) {
@@ -482,16 +482,20 @@ export abstract class Tracer {
    */
   abstract dispose(): void;
 
+  /** The shape of the array. */
   get shape(): number[] {
     return this.aval.shape;
   }
+  /** The total number of elements in the array. */
   get size(): number {
     return prod(this.shape);
   }
+  /** The dtype of the array. */
   get dtype(): DType {
     return this.aval.dtype;
   }
 
+  /** The number of dimensions of the array. */
   get ndim(): number {
     return this.shape.length;
   }
@@ -554,7 +558,7 @@ export abstract class Tracer {
     }
     let result = reduce(this, AluOp.Add, axis);
     result = result.mul(result.size / this.size);
-    if (opts?.keepDims) {
+    if (opts?.keepdims) {
       result = broadcast(result, this.shape, axis);
     }
     return result as this;

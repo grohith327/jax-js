@@ -169,14 +169,14 @@ export function runLayerNorm(
 ): np.Array {
   // Normalize with respect to the last dimension of x.
   const dimSize = x.shape[x.ndim - 1];
-  const avg = x.ref.mean(-1, { keepDims: true });
+  const avg = x.ref.mean(-1, { keepdims: true });
   x = x.sub(avg);
   const denom = np
     .sqrt(
       np
         .square(x.ref)
         .mul(1 / dimSize)
-        .sum(-1, { keepDims: true }),
+        .sum(-1, { keepdims: true }),
     )
     .add(np.array(1e-5, { dtype: x.dtype, device: x.device }));
   return x.div(denom).mul(weight).add(bias);
