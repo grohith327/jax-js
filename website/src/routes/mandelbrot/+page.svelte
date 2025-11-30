@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { init, jit, numpy as np, defaultDevice } from "@jax-js/jax";
+  import { defaultDevice, init, jit, numpy as np } from "@jax-js/jax";
   import { onMount } from "svelte";
 
   const width = 1000;

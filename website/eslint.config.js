@@ -23,9 +23,9 @@ export default ts.config(
         ...globals.browser,
         ...globals.node,
       },
-    },
-    parserOptions: {
-      tsconfigRootDir: import.meta.dirname,
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   {
