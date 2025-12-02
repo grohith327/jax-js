@@ -530,10 +530,17 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 <main class="p-4">
   <h1 class="text-2xl mb-2">conv2d benchmark</h1>
 
-  <p class="mb-4">
+  <p class="mb-2">
     Running different WebGPU conv2d implementations on {batchSize}x{channels}x{height}x{width}
     input with {outChannels} filters of size {filterHeight}x{filterWidth}.
   </p>
+
+  <ul class="list-disc list-inside text-sm pl-4 mb-4">
+    <li>"naive" is a simple nested-loop WebGPU kernel</li>
+    <li>"onnx" runs a <code>Conv</code> operator in onnxruntime-web</li>
+    <li>"tfjs" runs <code>tf.conv2d()</code> with NHWC format</li>
+    <li>"jax-js" runs <code>jax.lax.convGeneralDilated()</code></li>
+  </ul>
 
   <div class="flex flex-wrap gap-2 mb-4">
     {#each strategiesList as strategy (strategy.name)}

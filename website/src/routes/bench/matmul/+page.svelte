@@ -925,9 +925,22 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 <main class="p-4">
   <h1 class="text-2xl mb-2">matmul benchmark</h1>
 
-  <p class="mb-4">
+  <p class="mb-2">
     Running a few different WebGPU matmul programs on {n}x{n} matrices.
   </p>
+
+  <ul class="list-disc list-inside text-sm pl-4 mb-4">
+    <li>"naive" does a simple loop reduction with WebGPU block size</li>
+    <li>
+      "shmem-tiling" is tiled reduction with <code>var&lt;workgroup&gt;</code> memory
+    </li>
+    <li>"unroll4" has each thread compute a 4x4 block of output</li>
+    <li>"unroll4x2" has 4x4 blocks of output, with 2x loop unroll</li>
+    <li>"unroll4x4" has 4x4 blocks of output, with 4x loop unroll</li>
+    <li>"onnx" runs a <code>MatMul</code> node in onnxruntime-web</li>
+    <li>"tfjs" runs <code>tf.matMul()</code></li>
+    <li>"jax-js" runs <code>jax.numpy.dot()</code></li>
+  </ul>
 
   <div class="flex flex-wrap gap-2 mb-4">
     {#each strategiesList as strategy (strategy.name)}
