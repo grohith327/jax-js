@@ -192,7 +192,7 @@
         --color="var(--color-gray-200)"
       >
         {#snippet a()}
-          <div class="flex flex-col min-w-0">
+          <div class="flex flex-col min-w-0 !overflow-visible">
             <div class="px-4 py-2 flex items-center gap-1">
               <button
                 class="bg-emerald-100 hover:bg-emerald-200 active:scale-105 transition-all rounded-md text-sm px-3 py-0.5 flex items-center disabled:opacity-50"
@@ -269,4 +269,9 @@
 
 <style lang="postcss">
   @reference "$app.css";
+
+  /* Prevent diagnostics or hover hints from editor from being cut off. */
+  div :global(svelte-split-pane-section) {
+    overflow: visible !important;
+  }
 </style>

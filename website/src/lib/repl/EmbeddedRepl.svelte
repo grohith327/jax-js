@@ -60,7 +60,7 @@
       <option value="wasm">Wasm</option>
     </select>
   </div>
-  <div class="flex-1 min-h-0">
+  <div class="flex-1 min-h-0 split-pane-container">
     <SplitPane
       type="vertical"
       pos="-100px"
@@ -69,24 +69,26 @@
       --color="var(--color-gray-200)"
     >
       {#snippet a()}
-        <ReplEditor
-          bind:this={editor}
-          {initialText}
-          editorOptions={{
-            lineNumbersMinChars: 4,
-            padding: {
-              top: 8,
-              bottom: 8,
-            },
-            minimap: { enabled: false },
-            scrollbar: { alwaysConsumeMouseWheel: false, useShadows: false },
-            scrollBeyondLastLine: false,
-          }}
-          onchange={() => {
-            currentText = editor.getText();
-          }}
-          onrun={handleRun}
-        />
+        <div class="!overflow-visible">
+          <ReplEditor
+            bind:this={editor}
+            {initialText}
+            editorOptions={{
+              lineNumbersMinChars: 4,
+              padding: {
+                top: 8,
+                bottom: 8,
+              },
+              minimap: { enabled: false },
+              scrollbar: { alwaysConsumeMouseWheel: false, useShadows: false },
+              scrollBeyondLastLine: false,
+            }}
+            onchange={() => {
+              currentText = editor.getText();
+            }}
+            onrun={handleRun}
+          />
+        </div>
       {/snippet}
       {#snippet b()}
         {#if !runner.running && !runner.finished}
@@ -124,4 +126,9 @@
 
 <style lang="postcss">
   @reference "$app.css";
+
+  /* Prevent diagnostics or hover hints from editor from being cut off. */
+  .split-pane-container :global(svelte-split-pane-section) {
+    overflow: visible !important;
+  }
 </style>
