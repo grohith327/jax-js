@@ -143,16 +143,16 @@
         </p>
 
         <p class="mb-6">
-          Having an ML compiler on the web makes it possible to build a fully
-          featured library while keeping good performance. We take a different
-          approach compared to most runtimes by translating array programs into
+          Having a web-based compiler allows us to build a fully featured ML
+          library while keeping good performance. We take a different approach
+          compared to most runtimes by translating array programs into
           WebAssembly and WebGPU kernels.
         </p>
 
         <p>
           The goal of jax-js is to make numerical code accessible and deployable
-          to everyone on the web, so compute-intensive apps can run fast,
-          locally on consumer hardware.
+          to everyone, so compute-intensive apps can run fast and locally on
+          consumer hardware.
         </p>
       </div>
     </div>
