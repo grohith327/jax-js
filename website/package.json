@@ -32,13 +32,15 @@
     "tailwindcss": "^4.0.8",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.7"
+    "vite": "^7.2.7",
+    "vite-plugin-lucide-preprocess": "^1.4.6"
   },
   "dependencies": {
     "@fontsource-variable/tiktok-sans": "^5.2.3",
     "@jax-js/jax": "workspace:^",
     "@jax-js/loaders": "workspace:^",
     "@jax-js/optax": "workspace:^",
+    "@lucide/svelte": "^0.556.0",
     "@observablehq/plot": "^0.6.17",
     "@rich_harris/svelte-split-pane": "^2.0.0",
     "@rollup/browser": "^4.34.8",
@@ -49,7 +51,6 @@
     "es-toolkit": "^1.39.8",
     "fflate": "^0.8.2",
     "js-base64": "^3.7.8",
-    "@lucide/svelte": "^0.556.0",
     "monaco-editor": "^0.55.1",
     "onnx-proto": "^8.0.1",
     "onnxruntime-web": "^1.23.2",
