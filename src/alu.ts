@@ -185,6 +185,12 @@ export class AluExp implements FpHashable {
   static log(a: AluExp): AluExp {
     return new AluExp(AluOp.Log, a.dtype, [a]);
   }
+  static erf(a: AluExp): AluExp {
+    return new AluExp(AluOp.Erf, a.dtype, [a]);
+  }
+  static erfc(a: AluExp): AluExp {
+    return new AluExp(AluOp.Erfc, a.dtype, [a]);
+  }
   static sqrt(a: AluExp): AluExp {
     return new AluExp(AluOp.Sqrt, a.dtype, [a]);
   }
@@ -416,6 +422,12 @@ export class AluExp implements FpHashable {
         break;
       case AluOp.Log:
         ret = [Math.log(src[0].min), Math.log(src[0].max)];
+        break;
+      case AluOp.Erf:
+        ret = [erf(src[0].min), erf(src[0].max)];
+        break;
+      case AluOp.Erfc:
+        ret = [erfc(src[0].max), erfc(src[0].min)];
         break;
       case AluOp.Sqrt:
         ret = [Math.sqrt(src[0].min), Math.sqrt(src[0].max)];
@@ -999,6 +1011,10 @@ export class AluExp implements FpHashable {
           return Math.exp(x);
         case AluOp.Log:
           return Math.log(x);
+        case AluOp.Erf:
+          return erf(x);
+        case AluOp.Erfc:
+          return erfc(x);
         case AluOp.Sqrt:
           return Math.sqrt(x);
         case AluOp.Reciprocal:
@@ -1204,11 +1220,15 @@ export class AluExp implements FpHashable {
     return result;
   }
 
-  /** Produce a list of all distinct AluOp in this expression. */
-  distinctOps(): Set<AluOp> {
-    const ops = new Set<AluOp>();
+  /** Produce all distinct AluOp in this expression, with their dtypes. */
+  distinctOps(): Map<AluOp, Set<DType>> {
+    const ops = new Map<AluOp, Set<DType>>();
     this.fold((exp) => {
-      ops.add(exp.op);
+      const s = ops.get(exp.op) ?? new Set();
+      if (!s.has(exp.dtype)) {
+        s.add(exp.dtype);
+        ops.set(exp.op, s);
+      }
     });
     return ops;
   }
@@ -1240,6 +1260,8 @@ export enum AluOp {
   Atan = "Atan",
   Exp = "Exp",
   Log = "Log",
+  Erf = "Erf",
+  Erfc = "Erfc",
   Sqrt = "Sqrt",
   Reciprocal = "Reciprocal",
   Cast = "Cast",
@@ -1278,6 +1300,8 @@ export const AluGroup = {
     AluOp.Atan,
     AluOp.Exp,
     AluOp.Log,
+    AluOp.Erf,
+    AluOp.Erfc,
     AluOp.Sqrt,
     AluOp.Reciprocal,
     AluOp.Cast,
@@ -1298,6 +1322,8 @@ export const AluGroup = {
     AluOp.Atan,
     AluOp.Exp,
     AluOp.Log,
+    AluOp.Erf,
+    AluOp.Erfc,
     AluOp.Sqrt,
     AluOp.Reciprocal,
   ]),
@@ -1571,4 +1597,52 @@ function threefry2x32(k0: number, k1: number, c0: number, c1: number) {
   x1 = (x1 + ks0 + 5) >>> 0;
 
   return [x0, x1];
+}
+
+/**
+ * Abramowitz & Stegun’s widely used approximation for erf(x).
+ *
+ * `erf(x) = 1 - P(t) * exp(-x^2)` for `x >= 0`, where `t = 1/(1 + p*x)` and
+ * `P(t) = a1*t + a2*t^2 + a3*t^3 + a4*t^4 + a5*t^5`.
+ *
+ * Coefficients:
+ *  - p = 0.3275911
+ *  - a1 = 0.254829592
+ *  - a2 = -0.284496736
+ *  - a3 = 1.421413741
+ *  - a4 = -1.453152027
+ *  - a5 = 1.061405429
+ *
+ * This function computes just `E = P(t) * exp(-x^2)` for numerical reasons. The
+ * input is assumed to be non-negative.
+ *
+ * Reference: https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
+ */
+function _erfapprox(x: number): number {
+  const p = 0.3275911;
+  const a1 = 0.254829592;
+  const a2 = -0.284496736;
+  const a3 = 1.421413741;
+  const a4 = -1.453152027;
+  const a5 = 1.061405429;
+
+  const t = 1 / (1 + p * x);
+  const P_t = ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t;
+  return P_t * Math.exp(-x * x);
+}
+
+export function erf(x: number): number {
+  if (x >= 0) {
+    return 1 - _erfapprox(x);
+  } else {
+    return _erfapprox(-x) - 1;
+  }
+}
+
+export function erfc(x: number): number {
+  if (x >= 0) {
+    return _erfapprox(x);
+  } else {
+    return 2 - _erfapprox(-x);
+  }
 }

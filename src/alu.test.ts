@@ -102,6 +102,30 @@ test("AluOp.Log", () => {
   expect(e3.evaluate({})).toBeNaN();
 });
 
+test("AluOp.Erf", () => {
+  const e = AluExp.erf(AluExp.f32(1));
+  expect(e.evaluate({})).toBeCloseTo(0.84270079, 5);
+  expect(e.dtype).toBe(DType.Float32);
+
+  const e2 = AluExp.erf(AluExp.f32(0));
+  expect(e2.evaluate({})).toBeCloseTo(0.0, 5);
+
+  const e3 = AluExp.erf(AluExp.f32(-1));
+  expect(e3.evaluate({})).toBeCloseTo(-0.84270079, 5);
+});
+
+test("AluOp.Erfc", () => {
+  const e = AluExp.erfc(AluExp.f32(1));
+  expect(e.evaluate({})).toBeCloseTo(0.15729921, 5);
+  expect(e.dtype).toBe(DType.Float32);
+
+  const e2 = AluExp.erfc(AluExp.f32(100));
+  expect(e2.evaluate({})).toBeCloseTo(0.0, 5);
+
+  const e3 = AluExp.erfc(AluExp.f32(-1));
+  expect(e3.evaluate({})).toBeCloseTo(1.84270079, 5);
+});
+
 test("AluOp.Sqrt", () => {
   const e = AluExp.sqrt(AluExp.f32(16));
   expect(e.evaluate({})).toBe(4);

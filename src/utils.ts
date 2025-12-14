@@ -93,14 +93,23 @@ export function deepEqual(a: any, b: any): boolean {
   return true;
 }
 
-export function union<T>(...sets: (Iterable<T> | null | undefined)[]): Set<T> {
-  const result = new Set<T>();
-  for (const s of sets) {
-    if (s) {
-      for (const x of s) result.add(x);
+/** Produces a union of maps of sets. This mutates `a`. */
+export function mapSetUnion<T, U>(
+  a: Map<T, Set<U>>,
+  b?: Map<T, Set<U>>,
+): Map<T, Set<U>> {
+  if (!b) return a;
+  for (const [key, setB] of b.entries()) {
+    const setA = a.get(key);
+    if (setA) {
+      for (const val of setB) {
+        setA.add(val);
+      }
+    } else {
+      a.set(key, setB);
     }
   }
-  return result;
+  return a;
 }
 
 /** Splits the list based on a condition, `false` first then `true`. */

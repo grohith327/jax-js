@@ -3,15 +3,18 @@ import { expect, test } from "vitest";
 import {
   wasm_atan,
   wasm_cos,
+  wasm_erf,
+  wasm_erfc,
   wasm_exp,
   wasm_log,
   wasm_sin,
   wasm_threefry2x32,
 } from "./builtins";
 import { CodeGenerator } from "./wasmblr";
+import { erf, erfc } from "../../alu";
 
 function relativeError(wasmResult: number, jsResult: number): number {
-  return Math.abs(wasmResult - jsResult) / Math.max(Math.abs(jsResult), 1);
+  return Math.abs(wasmResult - jsResult) / Math.max(Math.abs(jsResult), 1e-3);
 }
 
 test("wasm_exp has relative error < 2e-7", async () => {
@@ -123,7 +126,7 @@ test("wasm_cos has absolute error < 5e-7", async () => {
   }
 });
 
-test("wasm_atan has relative error < 5e-7", async () => {
+test("wasm_atan has relative error < 2e-6", async () => {
   const cg = new CodeGenerator();
 
   const atanFunc = wasm_atan(cg);
@@ -140,7 +143,41 @@ test("wasm_atan has relative error < 5e-7", async () => {
   ];
 
   for (const x of testValues) {
-    expect(relativeError(atan(x), Math.atan(x))).toBeLessThan(5e-7);
+    expect(relativeError(atan(x), Math.atan(x))).toBeLessThan(2e-6);
+  }
+});
+
+test("wasm_erf has relative error < 2e-6", async () => {
+  const cg = new CodeGenerator();
+
+  const erfFunc = wasm_erf(cg, wasm_exp(cg));
+  cg.export(erfFunc, "erf");
+
+  const wasmBytes = cg.finish();
+  const { instance } = await WebAssembly.instantiate(wasmBytes);
+  const { erf: wasmErf } = instance.exports as { erf(x: number): number };
+
+  const testValues = [-3, -2, -1, -0.5, -0.1, 0, 0.01, 0.1, 0.5, 1, 2, 3];
+
+  for (const x of testValues) {
+    expect(relativeError(wasmErf(x), erf(x))).toBeLessThan(2e-6);
+  }
+});
+
+test("wasm_erfc has relative error < 2e-7", async () => {
+  const cg = new CodeGenerator();
+
+  const erfcFunc = wasm_erfc(cg, wasm_exp(cg));
+  cg.export(erfcFunc, "erfc");
+
+  const wasmBytes = cg.finish();
+  const { instance } = await WebAssembly.instantiate(wasmBytes);
+  const { erfc: wasmErfc } = instance.exports as { erfc(x: number): number };
+
+  const testValues = [-3, -2, -1, -0.5, -0.1, 0, 0.01, 0.1, 0.5, 1, 2, 3];
+
+  for (const x of testValues) {
+    expect(relativeError(wasmErfc(x), erfc(x))).toBeLessThan(2e-7);
   }
 });
 

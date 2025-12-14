@@ -8,12 +8,14 @@ import {
   UnsupportedOpError,
 } from "../backend";
 import { tuneNullopt } from "../tuner";
-import { DEBUG, rep, union } from "../utils";
+import { DEBUG, mapSetUnion, rep } from "../utils";
 import { WasmAllocator } from "./wasm/allocator";
 import {
   wasm_asin,
   wasm_atan,
   wasm_cos,
+  wasm_erf,
+  wasm_erfc,
   wasm_exp,
   wasm_log,
   wasm_sin,
@@ -140,7 +142,10 @@ function codegenWasm(kernel: Kernel): Uint8Array<ArrayBuffer> {
   const cg = new CodeGenerator();
   cg.memory.import("env", "memory");
 
-  const distinctOps = union(tune.exp.distinctOps(), re?.epilogue.distinctOps());
+  const distinctOps = mapSetUnion(
+    tune.exp.distinctOps(),
+    re?.epilogue.distinctOps(),
+  );
   const funcs: Record<string, number> = {};
   if (distinctOps.has(AluOp.Sin)) funcs.sin = wasm_sin(cg);
   if (distinctOps.has(AluOp.Cos)) funcs.cos = wasm_cos(cg);
@@ -148,6 +153,8 @@ function codegenWasm(kernel: Kernel): Uint8Array<ArrayBuffer> {
   if (distinctOps.has(AluOp.Atan)) funcs.atan = wasm_atan(cg);
   if (distinctOps.has(AluOp.Exp)) funcs.exp = wasm_exp(cg);
   if (distinctOps.has(AluOp.Log)) funcs.log = wasm_log(cg);
+  if (distinctOps.has(AluOp.Erf)) funcs.erf = wasm_erf(cg, funcs.exp);
+  if (distinctOps.has(AluOp.Erfc)) funcs.erfc = wasm_erfc(cg, funcs.exp);
   if (distinctOps.has(AluOp.Threefry2x32))
     funcs.threefry2x32 = wasm_threefry2x32(cg);
 
@@ -354,6 +361,8 @@ function translateExp(
       else if (op === AluOp.Atan) (gen(src[0]), cg.call(funcs.atan));
       else if (op === AluOp.Exp) (gen(src[0]), cg.call(funcs.exp));
       else if (op === AluOp.Log) (gen(src[0]), cg.call(funcs.log));
+      else if (op === AluOp.Erf) (gen(src[0]), cg.call(funcs.erf));
+      else if (op === AluOp.Erfc) (gen(src[0]), cg.call(funcs.erfc));
       else if (op === AluOp.Sqrt) (gen(src[0]), cg.f32.sqrt());
       else if (op === AluOp.Reciprocal)
         (cg.f32.const(1), gen(src[0]), cg.f32.div());

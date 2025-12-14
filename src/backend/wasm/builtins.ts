@@ -393,6 +393,85 @@ export function wasm_asin(cg: CodeGenerator): number {
 }
 
 /**
+ * Helper function for erf/erfc approximation.
+ *
+ * See `_erfapprox` in alu.ts for details on the algorithm used.
+ */
+function _erfapprox(cg: CodeGenerator, exp_func: number) {
+  const x = cg.local.declare(cg.f32);
+  const t = cg.local.declare(cg.f32);
+
+  cg.local.set(x);
+
+  // Coefficients
+  const p = 0.3275911;
+  const a1 = 0.254829592;
+  const a2 = -0.284496736;
+  const a3 = 1.421413741;
+  const a4 = -1.453152027;
+  const a5 = 1.061405429;
+
+  // t = 1 / (1 + p * x)
+  cg.f32.const(1.0);
+  cg.f32.const(1.0);
+  cg.f32.const(p);
+  cg.local.get(x);
+  cg.f32.mul();
+  cg.f32.add();
+  cg.f32.div();
+  cg.local.set(t);
+
+  _poly(cg, t, [0, a1, a2, a3, a4, a5]);
+
+  // Multiply by exp(-x^2)
+  cg.local.get(x);
+  cg.f32.neg();
+  cg.local.get(x);
+  cg.f32.mul();
+  cg.call(exp_func);
+  cg.f32.mul();
+}
+
+/** Approximate erf(x) (error function). */
+export function wasm_erf(cg: CodeGenerator, exp: number): number {
+  return cg.function([cg.f32], [cg.f32], () => {
+    cg.f32.const(1.0);
+    cg.local.get(0);
+    cg.f32.abs();
+    _erfapprox(cg, exp);
+    cg.f32.sub();
+
+    // Multiply by sign of x
+    cg.local.get(0);
+    cg.f32.copysign();
+  });
+}
+
+/** Approximate erfc(x) (complementary error function). */
+export function wasm_erfc(cg: CodeGenerator, exp: number): number {
+  return cg.function([cg.f32], [cg.f32], () => {
+    const e = cg.local.declare(cg.f32);
+
+    cg.local.get(0);
+    cg.f32.abs();
+    _erfapprox(cg, exp);
+    cg.local.set(e);
+
+    // Compute E for x >= 0, or 2 - E for x < 0
+    cg.f32.const(2.0);
+    cg.local.get(e);
+    cg.f32.sub();
+
+    cg.local.get(e);
+
+    cg.local.get(0);
+    cg.f32.const(0.0);
+    cg.f32.lt();
+    cg.select();
+  });
+}
+
+/**
  * Threefry2x32 pseudorandom number generator.
  *
  * Takes two 32-bit keys and two 32-bit counters as input,
