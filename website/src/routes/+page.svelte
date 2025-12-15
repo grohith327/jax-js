@@ -154,14 +154,14 @@
     </p>
 
     <EmbeddedRepl
-      initialText={String.raw`import { grad, numpy as np } from "@jax-js/jax";
+      initialText={String.raw`import { grad, numpy as np, vmap } from "@jax-js/jax";
 
 const f = (x: np.Array) => np.sqrt(x.ref.mul(x).sum());
-const df = grad(f);
-
 const x = np.array([1, 2, 3, 4]);
-console.log(f(x.ref).js());
-console.log(df(x).js());
+
+console.log(f(x.ref));
+console.log(grad(f)(x.ref));
+console.log(vmap(grad(np.square))(x));
 `}
     />
   </section>

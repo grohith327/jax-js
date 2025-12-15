@@ -272,7 +272,15 @@ const vmapRules: Partial<{ [P in Primitive]: VmapRule<P> }> = {
       {},
     );
   },
-  // TODO: where, transpose, broadcast, gather
+  // TODO: where, transpose
+  [Primitive.Broadcast](axisSize, [x], [xBdim], { shape, axis }) {
+    if (xBdim === null) {
+      return [[broadcast(x, shape, axis)], [null]];
+    }
+    const newShape = shape.toSpliced(xBdim, 0, axisSize);
+    const newAxis = axis.map((ax) => ax + (xBdim <= ax ? 1 : 0));
+    return [[broadcast(x, newShape, newAxis)], [xBdim]];
+  },
   [Primitive.Reshape](axisSize, [x], [xBdim], { shape }) {
     if (xBdim === null) {
       return [[reshape(x, shape)], [null]];
@@ -302,6 +310,7 @@ const vmapRules: Partial<{ [P in Primitive]: VmapRule<P> }> = {
     const newWidth = width.toSpliced(xBdim, 0, [0, 0]);
     return [[pad(x, newWidth)], [xBdim]];
   },
+  // TODO: gather
   [Primitive.JitCall](axisSize, args, dims, { name, jaxpr }) {
     const { newJaxpr, newConsts } = vmapJaxpr(jaxpr, axisSize, dims);
     const outs = bind(

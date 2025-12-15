@@ -86,7 +86,7 @@
   <div class="flex-1 min-h-0 split-pane-container">
     <SplitPane
       type="vertical"
-      pos="-100px"
+      pos="-112px"
       min="40px"
       max="-40px"
       --color="var(--color-gray-200)"
@@ -137,7 +137,7 @@
                 />
               {/if}
             </p>
-            <div class="flex-1 py-1 font-mono overflow-y-auto">
+            <div class="flex-1 py-0.5 font-mono overflow-y-auto">
               {#each runner.consoleLines as line}
                 <ConsoleLine {line} />
               {/each}
