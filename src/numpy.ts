@@ -898,6 +898,39 @@ export function sign(x: ArrayLike): Array {
   return where(notEqual(x.ref, 0), where(less(x.ref, 0), -1, 1), 0);
 }
 
+/**
+ * Return the Hamming window of size M, a taper with a weighted cosine bell.
+ *
+ * `w(n) = 0.54 - 0.46 * cos(2πn/(M-1))` for `0 <= n <= M-1`.
+ */
+export function hamming(M: number): Array {
+  return cos(linspace(0, 2 * Math.PI, M))
+    .mul(-0.46)
+    .add(0.54);
+}
+
+/**
+ * Return the Hann window of size M, a taper with a weighted cosine bell.
+ *
+ * `w(n) = 0.5 - 0.5 * cos(2πn/(M-1))` for `0 <= n <= M-1`.
+ */
+export function hann(M: number): Array {
+  return cos(linspace(0, 2 * Math.PI, M))
+    .mul(-0.5)
+    .add(0.5);
+}
+
+/**
+ * @function
+ * Compute the Heaviside step function. It is defined piecewise:
+ * - `heaviside(x1, x2) = 0` for `x1 < 0`,
+ * - `heaviside(x1, x2) = x2` for `x1 == 0`,
+ * - `heaviside(x1, x2) = 1` for `x1 > 0`.
+ */
+export const heaviside = jit(function heaviside(x1: Array, x2: Array) {
+  return where(less(x1.ref, 0), 0, where(equal(x1, 0), x2, 1));
+});
+
 /** Calculate element-wise square of the input array. */
 export function square(x: ArrayLike): Array {
   x = fudgeArray(x);

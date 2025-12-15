@@ -7,6 +7,7 @@ import {
   init,
   numpy as np,
   scipySpecial as special,
+  vmap,
 } from "@jax-js/jax";
 import { beforeEach, expect, suite, test } from "vitest";
 
@@ -44,7 +45,7 @@ suite.each(devices)("device:%s", (device) => {
 
     test("erf derivative", () => {
       const x = np.linspace(-3, 3, 10);
-      const dy = grad((x: np.Array) => special.erf(x).sum())(x.ref);
+      const dy = vmap(grad(special.erf))(x.ref);
       const expected = np.multiply(
         2 / Math.sqrt(Math.PI),
         np.exp(np.negative(np.square(x))),
@@ -54,7 +55,7 @@ suite.each(devices)("device:%s", (device) => {
 
     test("erfc derivative", () => {
       const x = np.linspace(-3, 3, 10);
-      const dy = grad((x: np.Array) => special.erfc(x).sum())(x.ref);
+      const dy = vmap(grad(special.erfc))(x.ref);
       const expected = np.multiply(
         -2 / Math.sqrt(Math.PI),
         np.exp(np.negative(np.square(x))),

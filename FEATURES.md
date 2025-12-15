@@ -254,9 +254,9 @@ Most operations behave the same way as they do in JAX.
 | `gradient`            | 🟠      |                                         |
 | `greater`             | 🟢      |                                         |
 | `greater_equal`       | 🟢      |                                         |
-| `hamming`             | 🟠      |                                         |
-| `hanning`             | 🟠      |                                         |
-| `heaviside`           | 🟠      |                                         |
+| `hamming`             | 🟢      |                                         |
+| `hanning`             | 🟢      |                                         |
+| `heaviside`           | 🟢      |                                         |
 | `histogram`           | 🔴      |                                         |
 | `histogram_bin_edges` | 🔴      |                                         |
 | `histogram2d`         | 🔴      |                                         |
