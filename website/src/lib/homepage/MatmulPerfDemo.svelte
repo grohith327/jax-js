@@ -80,18 +80,41 @@
 
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) return ericLaptopResults;
+    const info = await adapter.requestAdapterInfo();
     const hasF16 = adapter.features.has("shader-f16");
 
     const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
     const isMobile = /Mobi/.test(navigator.userAgent);
+    const isNvidia = /NVIDIA/i.test(info.vendor);
+    const isGoodGpu = /NVIDIA|AMD|Qualcomm|ARM/i.test(info.vendor); // "Good" GPUs, probably won't crash
 
     // Large matmuls put pressure on mobile browsers like iOS Safari, and it can
     // lead to page crashes. Also the measured FLOPs is lower.
     //
     // It also looks like some Windows PCs have trouble with GPU, keeping things
     // suitably small to really avoid accidentally crashing someone's browser on
-    // page load.
-    const gpuDim = isApple ? (isMobile ? 2048 : 4096) : 768;
+    // page load. Nvidia GPUs are definitely fine though.
+    //
+    // Trying to get as good of a first impression as possible while not
+    // stressing out people's computers too much.
+    //
+    // References:
+    // - https://github.com/gpuweb/gpuweb/blob/WGSLv1/design/AdapterIdentifiers.md
+    // - https://github.com/gpuweb/gpuweb/pull/2660
+    // - https://github.com/milhidaka/webgpu-blas
+    // - https://github.com/chromium/chromium/blob/145.0.7583.2/content/utility/on_device_model/on_device_model_sandbox_init.cc#L41-L44
+    // - https://github.com/ProfSynapse/nexus/blob/3.2.0/src/services/llm/adapters/webllm/WebLLMVRAMDetector.ts
+    // - https://github.com/1karess/wasm-fingerprint/blob/main/src/webgpu-detection.js#L726-L740
+    let gpuDim: number;
+    if (isApple) {
+      gpuDim = isMobile ? 2048 : 4096;
+    } else if (isNvidia) {
+      gpuDim = 4096;
+    } else if (isGoodGpu) {
+      gpuDim = isMobile ? 1024 : 2048;
+    } else {
+      gpuDim = 768;
+    }
 
     return {
       flops: {
