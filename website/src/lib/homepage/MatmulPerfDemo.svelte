@@ -82,12 +82,16 @@
     if (!adapter) return ericLaptopResults;
     const hasF16 = adapter.features.has("shader-f16");
 
+    // Large matmuls put pressure on mobile browsers like iOS Safari, and it can
+    // lead to page crashes. Also the measured FLOPs is lower.
+    const gpuDim = navigator.userAgent.includes("Mobi") ? 2048 : 4096;
+
     return {
       flops: {
         Wasm: await benchFlops(128, "wasm", "float32"),
-        WebGPU: await benchFlops(4096, "webgpu", "float32"),
+        WebGPU: await benchFlops(gpuDim, "webgpu", "float32"),
         "WebGPU-fp16": hasF16
-          ? await benchFlops(4096, "webgpu", "float16")
+          ? await benchFlops(gpuDim, "webgpu", "float16")
           : undefined,
       },
       browser: "Your browser (live)",
