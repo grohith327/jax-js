@@ -53,7 +53,7 @@
     "@types/debug": "^4.1.12",
     "@vitest/browser-playwright": "^4.0.9",
     "@vitest/coverage-v8": "4.0.9",
-    "@webgpu/types": "^0.1.64",
+    "@webgpu/types": "^0.1.68",
     "eslint": "^9.31.0",
     "eslint-plugin-import": "^2.32.0",
     "globals": "^16.0.0",
@@ -71,6 +71,11 @@
   "packageManager": "pnpm@10.22.0",
   "engines": {
     "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tensorflow/tfjs-core>@webgpu/types": "^0.1.68"
+    }
   },
   "prettier": {
     "plugins": [

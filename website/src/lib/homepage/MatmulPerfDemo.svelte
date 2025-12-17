@@ -80,13 +80,12 @@
 
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) return ericLaptopResults;
-    const info = await adapter.requestAdapterInfo();
     const hasF16 = adapter.features.has("shader-f16");
 
     const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
     const isMobile = /Mobi/.test(navigator.userAgent);
-    const isNvidia = /NVIDIA/i.test(info.vendor);
-    const isGoodGpu = /NVIDIA|AMD|Qualcomm|ARM/i.test(info.vendor); // "Good" GPUs, probably won't crash
+    const isNvidia = /NVIDIA/i.test(adapter.info.vendor);
+    const isGoodGpu = /NVIDIA|AMD|Qualcomm|ARM/i.test(adapter.info.vendor); // "Good" GPUs, probably won't crash
 
     // Large matmuls put pressure on mobile browsers like iOS Safari, and it can
     // lead to page crashes. Also the measured FLOPs is lower.
@@ -113,7 +112,7 @@
     } else if (isGoodGpu) {
       gpuDim = isMobile ? 1024 : 2048;
     } else {
-      gpuDim = 768;
+      gpuDim = 512;
     }
 
     return {
