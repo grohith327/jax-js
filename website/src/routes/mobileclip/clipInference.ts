@@ -78,7 +78,10 @@ export function runMobileCLIPTextEncoder(
   x = runLayerNorm(lnFinal, x.ref);
 
   const finalFeatures = x.slice(np.argmax(textTokens, -1));
-  return np.dot(textProjection.transpose(), finalFeatures); // [D_out]
+  const output = np.dot(textProjection.transpose(), finalFeatures); // [D_out]
+
+  // Normalize output to be a unit vector
+  return output.ref.div(np.sqrt(np.sum(np.square(output))).add(1e-3));
 }
 
 export type MobileCLIPTextBlock = {
