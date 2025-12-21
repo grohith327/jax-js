@@ -502,6 +502,8 @@ const jitRules: { [P in Primitive]: JitRule<P> } = {
   [Primitive.Mod]: broadcastedJit(([a, b]) => AluExp.mod(a, b)),
   [Primitive.Neg]: unopJit((a) => AluExp.sub(AluExp.const(a.dtype, 0), a)),
   [Primitive.Reciprocal]: unopJit(AluExp.reciprocal),
+  [Primitive.Floor]: unopJit(AluExp.floor),
+  [Primitive.Ceil]: unopJit(AluExp.ceil),
   [Primitive.StopGradient]: unopJit((a) => a), // No-op, just return the input.
   [Primitive.Cast]: unopJit((a, { dtype }) => AluExp.cast(dtype, a)),
   [Primitive.Bitcast]: unopJit((a, { dtype }) => AluExp.bitcast(dtype, a)),

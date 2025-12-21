@@ -39,6 +39,8 @@ export enum Primitive {
   Mod = "mod", // uses sign of dividend, C-style, matches JS but not Python
   Neg = "neg",
   Reciprocal = "reciprocal",
+  Floor = "floor",
+  Ceil = "ceil",
   StopGradient = "stop_gradient",
   Cast = "cast",
   Bitcast = "bitcast",
@@ -129,6 +131,14 @@ export function neg(x: TracerValue) {
 
 export function reciprocal(x: TracerValue) {
   return bind1(Primitive.Reciprocal, [x]);
+}
+
+export function floor(x: TracerValue) {
+  return bind1(Primitive.Floor, [x]);
+}
+
+export function ceil(x: TracerValue) {
+  return bind1(Primitive.Ceil, [x]);
 }
 
 export function stopGradient(x: TracerValue) {

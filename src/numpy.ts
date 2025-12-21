@@ -83,6 +83,10 @@ export const multiply = core.mul as (x: ArrayLike, y: ArrayLike) => Array;
 export const negative = core.neg as (x: ArrayLike) => Array;
 /** @function Calculate element-wise reciprocal of the input. This is `1/x`. */
 export const reciprocal = core.reciprocal as (x: ArrayLike) => Array;
+/** @function Round input down to the nearest integer. */
+export const floor = core.floor as (x: ArrayLike) => Array;
+/** @function Round input up to the nearest integer. */
+export const ceil = core.ceil as (x: ArrayLike) => Array;
 /** @function Element-wise sine function (takes radians). */
 export const sin = core.sin as (x: ArrayLike) => Array;
 /** @function Element-wise cosine function (takes radians). */

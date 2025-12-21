@@ -205,6 +205,14 @@ export class AluExp implements FpHashable {
   static sqrt(a: AluExp): AluExp {
     return new AluExp(AluOp.Sqrt, a.dtype, [a]);
   }
+  static floor(a: AluExp): AluExp {
+    if (!isFloatDtype(a.dtype)) return a;
+    return new AluExp(AluOp.Floor, a.dtype, [a]);
+  }
+  static ceil(a: AluExp): AluExp {
+    if (!isFloatDtype(a.dtype)) return a;
+    return new AluExp(AluOp.Ceil, a.dtype, [a]);
+  }
   static reciprocal(a: AluExp): AluExp {
     return new AluExp(AluOp.Reciprocal, a.dtype, [a]);
   }
@@ -452,6 +460,12 @@ export class AluExp implements FpHashable {
         break;
       case AluOp.Sqrt:
         ret = [Math.sqrt(src[0].min), Math.sqrt(src[0].max)];
+        break;
+      case AluOp.Floor:
+        ret = [Math.floor(src[0].min), Math.floor(src[0].max)];
+        break;
+      case AluOp.Ceil:
+        ret = [Math.ceil(src[0].min), Math.ceil(src[0].max)];
         break;
       case AluOp.Reciprocal:
         if (src[0].min <= 0 && src[0].max >= 0) return [-Infinity, Infinity];
@@ -1040,6 +1054,10 @@ export class AluExp implements FpHashable {
           return erfc(x);
         case AluOp.Sqrt:
           return Math.sqrt(x);
+        case AluOp.Floor:
+          return Math.floor(x);
+        case AluOp.Ceil:
+          return Math.ceil(x);
         case AluOp.Reciprocal:
           return 1 / x;
         case AluOp.Cast: {
@@ -1289,6 +1307,8 @@ export enum AluOp {
   Erf = "Erf",
   Erfc = "Erfc",
   Sqrt = "Sqrt",
+  Floor = "Floor",
+  Ceil = "Ceil",
   Reciprocal = "Reciprocal",
   Cast = "Cast",
   Bitcast = "Bitcast",
@@ -1329,6 +1349,8 @@ export const AluGroup = {
     AluOp.Erf,
     AluOp.Erfc,
     AluOp.Sqrt,
+    AluOp.Floor,
+    AluOp.Ceil,
     AluOp.Reciprocal,
     AluOp.Cast,
     AluOp.Bitcast,
@@ -1352,6 +1374,8 @@ export const AluGroup = {
     AluOp.Erfc,
     AluOp.Sqrt,
     AluOp.Reciprocal,
+    AluOp.Floor,
+    AluOp.Ceil,
   ]),
 };
 

@@ -393,7 +393,9 @@ function translateExp(
       else if (op === AluOp.Reciprocal) {
         const dt = dtyF(cg, op, dtype);
         (dt.const(1), gen(src[0]), dt.div());
-      } else if (op === AluOp.Cast) {
+      } else if (op === AluOp.Floor) (gen(src[0]), dtyF(cg, op, dtype).floor());
+      else if (op === AluOp.Ceil) (gen(src[0]), dtyF(cg, op, dtype).ceil());
+      else if (op === AluOp.Cast) {
         gen(src[0]);
         const dtype0 = src[0].dtype;
         const i32repr =

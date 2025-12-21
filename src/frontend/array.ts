@@ -825,6 +825,12 @@ export class Array extends Tracer {
       [Primitive.Reciprocal]([x]) {
         return [x.#unary(AluOp.Reciprocal)];
       },
+      [Primitive.Floor]([x]) {
+        return [x.#unary(AluOp.Floor)];
+      },
+      [Primitive.Ceil]([x]) {
+        return [x.#unary(AluOp.Ceil)];
+      },
       [Primitive.StopGradient]([x]) {
         return [x]; // Stop gradient is a no-op, just return the input.
       },

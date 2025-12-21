@@ -421,22 +421,24 @@ function pipelineSource(device: GPUDevice, kernel: Kernel): ShaderInfo {
         source = `inverseSqrt(${a})`;
       } else {
         const a = gen(src[0]);
-        if (op === AluOp.Sin) source = `sin(${a})`;
-        else if (op === AluOp.Cos) source = `cos(${a})`;
-        else if (op === AluOp.Asin) source = `asin(${a})`;
-        else if (op === AluOp.Atan) source = `atan(${a})`;
-        else if (op === AluOp.Exp) source = `exp(${a})`;
-        else if (op === AluOp.Log) source = `log(${a})`;
+        if (op === AluOp.Sin) source = `sin(${strip1(a)})`;
+        else if (op === AluOp.Cos) source = `cos(${strip1(a)})`;
+        else if (op === AluOp.Asin) source = `asin(${strip1(a)})`;
+        else if (op === AluOp.Atan) source = `atan(${strip1(a)})`;
+        else if (op === AluOp.Exp) source = `exp(${strip1(a)})`;
+        else if (op === AluOp.Log) source = `log(${strip1(a)})`;
         else if (op === AluOp.Erf || op === AluOp.Erfc) {
           const funcName = op === AluOp.Erf ? "erf" : "erfc";
           if (dtype !== DType.Float32) {
             // Always compute special functions in f32 for precision.
-            source = `${dtypeToWgsl(dtype)}(${funcName}(f32(${a})))`;
+            source = `${dtypeToWgsl(dtype)}(${funcName}(f32(${strip1(a)})))`;
           } else {
-            source = `${funcName}(${a})`;
+            source = `${funcName}(${strip1(a)})`;
           }
-        } else if (op === AluOp.Sqrt) source = `sqrt(${a})`;
+        } else if (op === AluOp.Sqrt) source = `sqrt(${strip1(a)})`;
         else if (op === AluOp.Reciprocal) source = `(1.0 / ${a})`;
+        else if (op === AluOp.Floor) source = `floor(${strip1(a)})`;
+        else if (op === AluOp.Ceil) source = `ceil(${strip1(a)})`;
         else if (op === AluOp.Cast)
           source = `${dtypeToWgsl(dtype)}(${strip1(a)})`;
         else if (op === AluOp.Bitcast)

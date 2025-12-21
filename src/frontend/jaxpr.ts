@@ -733,6 +733,8 @@ export const abstractEvalRules: { [P in Primitive]: AbstractEvalRule<P> } = {
   [Primitive.Mod]: binopAbstractEval,
   [Primitive.Neg]: vectorizedUnopAbstractEval,
   [Primitive.Reciprocal]: vectorizedUnopAbstractEval,
+  [Primitive.Floor]: vectorizedUnopAbstractEval,
+  [Primitive.Ceil]: vectorizedUnopAbstractEval,
   [Primitive.StopGradient]: vectorizedUnopAbstractEval,
   [Primitive.Cast]([x]: ShapedArray[], { dtype }) {
     return [new ShapedArray(x.shape, dtype, false)];

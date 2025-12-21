@@ -159,6 +159,8 @@ const jvpRules: { [P in Primitive]: JvpRule<P> } = {
     const xRecip = reciprocal(x.ref);
     return [[xRecip.ref], [neg(xRecip.ref.mul(xRecip)).mul(dx)]];
   },
+  [Primitive.Floor]: zeroTangentsJvp(Primitive.Floor),
+  [Primitive.Ceil]: zeroTangentsJvp(Primitive.Ceil),
   [Primitive.StopGradient]: zeroTangentsJvp(Primitive.StopGradient),
   [Primitive.Cast]([x], [dx], { dtype }) {
     if (x.dtype === dtype) return [[x], [dx]]; // No-op if dtype is the same.

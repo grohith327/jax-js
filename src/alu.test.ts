@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { AluExp, DType } from "./alu";
+import { AluExp, AluOp, DType } from "./alu";
 
 test("AluExp can be evaluated", () => {
   const e = AluExp.i32(3);
@@ -237,4 +237,34 @@ test("AluOp.Mod", () => {
   // Floating point mod also works.
   const e4 = AluExp.mod(AluExp.f32(5.5), AluExp.f32(-1.7));
   expect(e4.evaluate({})).toBeCloseTo(0.4);
+});
+
+test("AluOp.Floor", () => {
+  const e = AluExp.floor(AluExp.f32(3.7));
+  expect(e.evaluate({})).toBe(3);
+  expect(e.dtype).toBe(DType.Float32);
+
+  const e2 = AluExp.floor(AluExp.f32(-2.3));
+  expect(e2.evaluate({})).toBe(-3);
+
+  const e3 = AluExp.floor(AluExp.f32(0.0));
+  expect(e3.evaluate({})).toBe(0);
+
+  const e4 = AluExp.floor(AluExp.i32(0));
+  expect(e4.op).toBe(AluOp.Const); // Floor on integers is a no-op
+
+  const e5 = AluExp.floor(AluExp.f32(Infinity));
+  expect(e5.evaluate({})).toBe(Infinity);
+});
+
+test("AluOp.Ceil", () => {
+  const e = AluExp.ceil(AluExp.f32(3.2));
+  expect(e.evaluate({})).toBe(4);
+  expect(e.dtype).toBe(DType.Float32);
+
+  const e2 = AluExp.ceil(AluExp.f32(-2.8));
+  expect(e2.evaluate({})).toBe(-2);
+
+  const e3 = AluExp.ceil(AluExp.f32(0.0));
+  expect(e3.evaluate({})).toBe(0);
 });
