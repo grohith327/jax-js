@@ -1,4 +1,6 @@
-import { AluOp, DType, isFloatDtype, promoteTypes } from "./alu";
+// Port of the `jax.numpy` module, typically imported as `np`.
+
+import { AluOp, DType, isFloatDtype, promoteTypes } from "../alu";
 import {
   arange,
   Array,
@@ -8,18 +10,18 @@ import {
   eye,
   fudgeArray,
   full,
-  fullLike as fullLikeUnfudged,
+  fullLike as fullLikeTracer,
   identity,
   linspace,
   ones,
-  onesLike as onesLikeUnfudged,
+  onesLike as onesLikeTracer,
   zeros,
-  zerosLike as zerosLikeUnfudged,
-} from "./frontend/array";
-import * as core from "./frontend/core";
-import { jit } from "./frontend/jaxpr";
-import * as vmapModule from "./frontend/vmap";
-import { Pair } from "./shape";
+  zerosLike as zerosLikeTracer,
+} from "../frontend/array";
+import * as core from "../frontend/core";
+import { jit } from "../frontend/jaxpr";
+import { moveaxis as moveaxisTracer } from "../frontend/vmap";
+import { Pair } from "../shape";
 import {
   checkAxis,
   deepEqual,
@@ -28,7 +30,7 @@ import {
   normalizeAxis,
   range,
   rep,
-} from "./utils";
+} from "../utils";
 
 export {
   arange,
@@ -149,7 +151,7 @@ export const reshape = core.reshape as (x: ArrayLike, shape: number[]) => Array;
  * @function
  * Move axes of an array to new positions. Other axes retain original order.
  */
-export const moveaxis = vmapModule.moveaxis as (
+export const moveaxis = moveaxisTracer as (
   x: ArrayLike,
   src: number,
   dst: number,
@@ -180,7 +182,7 @@ export const shape = core.getShape as (x: ArrayLike) => number[];
  * @function
  * Return an array of zeros with the same shape and type as a given array.
  */
-export const zerosLike = zerosLikeUnfudged as (
+export const zerosLike = zerosLikeTracer as (
   a: ArrayLike,
   dtype?: DType,
 ) => Array;
@@ -189,7 +191,7 @@ export const zerosLike = zerosLikeUnfudged as (
  * @function
  * Return an array of ones with the same shape and type as a given array.
  */
-export const onesLike = onesLikeUnfudged as (
+export const onesLike = onesLikeTracer as (
   a: ArrayLike,
   dtype?: DType,
 ) => Array;
@@ -198,7 +200,7 @@ export const onesLike = onesLikeUnfudged as (
  * @function
  * Return a full array with the same shape and type as a given array.
  */
-export const fullLike = fullLikeUnfudged as (
+export const fullLike = fullLikeTracer as (
   a: ArrayLike,
   fillValue: number | boolean | Array,
   dtype?: DType,

@@ -1,8 +1,5 @@
 // Port of the `jax.random` module.
 
-import { fudgeArray } from "./frontend/array";
-import { bitcast, randomBits } from "./frontend/core";
-import { jit } from "./frontend/jaxpr";
 import {
   array,
   Array,
@@ -14,6 +11,9 @@ import {
   sqrt,
   stack,
 } from "./numpy";
+import { fudgeArray } from "../frontend/array";
+import { bitcast, randomBits } from "../frontend/core";
+import { jit } from "../frontend/jaxpr";
 
 function validateKeyShape(key: Array): number[] {
   if (key.ndim === 0) {

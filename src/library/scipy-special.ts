@@ -1,7 +1,7 @@
 // Mirrors the `jax.scipy.special` module in JAX.
 
-import { jit } from "./frontend/jaxpr";
 import { Array, log, subtract } from "./numpy";
+import { jit } from "../frontend/jaxpr";
 
 export { erf } from "./lax";
 export { erfc } from "./lax";

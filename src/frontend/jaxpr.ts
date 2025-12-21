@@ -1,5 +1,4 @@
 import { byteWidth, DType } from "../alu";
-import { ArrayLike } from "../numpy";
 import { PPrint } from "../pprint";
 import { type Pair } from "../shape";
 import {
@@ -17,7 +16,7 @@ import {
   unzip2,
   zip,
 } from "../utils";
-import { array, Array, pureArray } from "./array";
+import { array, Array, ArrayLike, pureArray } from "./array";
 import { checkConvShape, checkPoolShape } from "./convolution";
 import {
   AbstractValue,

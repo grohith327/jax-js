@@ -3,11 +3,11 @@
 // Unlike in JAX, this does not actually underpin `jax.numpy` as a more "core"
 // set of operations, as they both build open the same foundations.
 
-import { Array, ArrayLike } from "./frontend/array";
-import * as core from "./frontend/core";
-import { bind1, conv as convPrimitive, Primitive } from "./frontend/core";
-import { vmap } from "./frontend/vmap";
-import { rep, zipn } from "./utils";
+import { Array, ArrayLike } from "../frontend/array";
+import * as core from "../frontend/core";
+import { bind1, conv as convPrimitive, Primitive } from "../frontend/core";
+import { vmap } from "../frontend/vmap";
+import { rep, zipn } from "../utils";
 
 export type PaddingType = "VALID" | "SAME" | "SAME_LOWER" | [number, number][];
 

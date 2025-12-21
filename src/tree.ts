@@ -1,6 +1,6 @@
 // Utilities for working with tree-like container data structures ("pytrees").
 
-import type { Array } from "./numpy";
+import type { Array } from "./library/numpy";
 import { deepEqual, unzip2 } from "./utils";
 
 const JsArray = globalThis.Array;
