@@ -56,7 +56,7 @@
     "js-base64": "^3.7.8",
     "merge-descriptors": "^2.0.0",
     "monaco-editor": "^0.55.1",
-    "onnx-buf": "^1.20.0-0",
+    "onnx-buf": "^1.20.0-1",
     "onnxruntime-web": "^1.23.2",
     "p-throttle": "^7.0.0",
     "svelte": "^5.20.2"

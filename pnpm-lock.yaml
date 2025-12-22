@@ -134,8 +134,8 @@ importers:
         specifier: ^0.55.1
         version: 0.55.1
       onnx-buf:
-        specifier: ^1.20.0-0
-        version: 1.20.0-0
+        specifier: ^1.20.0-1
+        version: 1.20.0-1
       onnxruntime-web:
         specifier: ^1.23.2
         version: 1.23.2
@@ -2414,8 +2414,8 @@ packages:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
 
-  onnx-buf@1.20.0-0:
-    resolution: {integrity: sha512-h6BWfsBanlws+AYlHdX+hrTQAhI+sHwbjHVr8T3PXwgaCY9d/PSm+F0ckMzCPWqDHneC6a6L4t8nP/hLYDl3Jg==}
+  onnx-buf@1.20.0-1:
+    resolution: {integrity: sha512-NzsKNR3AFo1aYQJ6PXZ5V0adMbwovcO8ZoPC+mOpcOt1DYjzp30tUi22Mc4gJilzwSn/kle6Kz1yZuQexWflNg==}
     engines: {pnpm: '>=10.0.0'}
 
   onnxruntime-common@1.23.2:
@@ -5460,7 +5460,7 @@ snapshots:
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
 
-  onnx-buf@1.20.0-0:
+  onnx-buf@1.20.0-1:
     dependencies:
       '@bufbuild/protobuf': 2.10.2
 
